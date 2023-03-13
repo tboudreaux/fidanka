@@ -4,7 +4,7 @@ from fidanka.isochrone.isochrone import interp_isochrone_age
 import numpy as np
 import pandas as pd
 import numpy.typing as npt
-from typing import Callable, Tuple, Union
+from typing import Callable, Tuple, Union, List, Any
 
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
@@ -17,7 +17,7 @@ FARRAY_1D = npt.NDArray[np.float64]
 R2_VECTOR = npt.NDArray[[np.float64, np.float64]]
 FARRAY_2D_2C = npt.NDArray[[FARRAY_1D, FARRAY_1D]]
 
-CHI2R = dict[str, Union[OptimizeResult, pd.DataFrame, FARRAY_2D_2C]]
+CHI2R = dict[str, Any]
 ORT = Tuple[float, Tuple[float, float, float], str, float, float]
 
 def pfD(
@@ -178,7 +178,7 @@ def optimize(
 
 def order_best_fit_result(
         optimizationResults: dict[str, dict[float, dict[float, CHI2R]]]
-        ) -> dict[str, list[ORT]]:
+        ) -> dict[str, List[ORT]]:
     """
     Order the best fit optimization results so that they are easy to parse.
     Ordering is done based on the fun attribure of the OptimizeResult object.
@@ -192,7 +192,7 @@ def order_best_fit_result(
 
     Returns
     -------
-        comparison : dict[str, list[ORT]]
+        comparison : dict[str, List[ORT]]
             Where ORT is a Tuple continuing the chi2nu minimal result, the
             input vector x attaining that result (in the order of age,
             distance, Av), the population name, the helium mass fraction, and
@@ -212,7 +212,7 @@ def order_best_fit_result(
     return comparison
 
 def fit_isochrone_to_population(
-        fiducialSequences : list[FARRAY_2D_2C],
+        fiducialSequences : List[FARRAY_2D_2C],
         ISOs : dict[str, dict[float, dict[float, pd.DataFrame]]],
         filters : Tuple[str, str, str],
         fiducialLookup : dict[str, int]
@@ -227,9 +227,7 @@ def fit_isochrone_to_population(
 
     Parameters
     ----------
-        fiducialSequences : list[np.ndarray[[np.ndarray[float64],
-                                             np.ndarray[float64]
-                                             ]]]
+        fiducialSequences : List[np.ndarray[[np.ndarray[float64], np.ndarray[float64]]]]
             list of Fiducual lines in the format output by the fiducual
             function. Where fiducialLine[:, 0] are the colors of each fiducual
             point and fiducialLine[:, 1] are the magniudes of each fiducual
