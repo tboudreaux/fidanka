@@ -3,8 +3,8 @@
 Routines for generating fiducual lines and fitting isochrones to those fiducual
 lines
 
-## API Docs
-https://algebrist.com/~tboudreaux/docs/fidanka/fidanka.fiducial.html
+## Docs
+API Docs can be found <a src="https://algebrist.com/~tboudreaux/docs/fidanka">here</a>
 
 ## Install
 
