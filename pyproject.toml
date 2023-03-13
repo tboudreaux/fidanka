@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name="fidanka"
+authors = [
+	{name = "Thomas M. Boudreaux", email="thomas@boudreauxmail.com"},
+	]
+description="Fiducual line generation and isochone fitting"
+readme="README.md"
+requires-python = ">=3.8"
+keywords=["Globular Cluster"]
+license = { file = "LICENSE" }
+classifiers = [
+	"Development Status :: 4 - Beta",
+	"Intended Audience :: Science/Research",
+	"License :: OSI Approved :: MIT License",
+	"Programming Language :: Python",
+	"Programming Language :: Python :: 3",
+	]
+dependencies = [
+	"matplotlib",
+	"numpy",
+	"scipy",
+	"tqdm",
+	"pandas"
+	]
+version = "0.5.0"
+
+[project.urls]
+Homepage = "https://github.com/tboudreaux/fidanka"
+
