@@ -4,7 +4,7 @@ authors:
 - family-names: "Boudreaux"
   given-names: "Thomas"
   orcid: "https://orcid.org/0000-0002-2600-7513"
-title: pyTOPSScrape
+title: fidanka
 version: 0.5
 date-released: 2023-03-13
 url: "https://github.com/tboudreaux/fidanka"
