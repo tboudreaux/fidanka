@@ -39,3 +39,17 @@ bestFitResults = optimize(fiducualLine, iso, ("F275W", "F814W", "F814W"))
 
 print(bestFitResults)
 ```
+
+
+# Notes
+Currently my implimentation of shifting the isochrone around due to galactic
+reddening is done wrong. This should be a really easy fix I just haven't had
+time to get to it since I can debug other stuff without fixing that. Don't
+trust distnces or reddening's you get until fixing that (I've just mixed up Av,
+E(B-V) and the filters I'm using...should be an easy fix). I'll get to it in
+the next week or two and/or you are welcome to make the change and copmmit it
+to the repo.
+
+Also, I've extensivley documented the code. In the next few days I'll use
+sphinx to build the documentation to a web page so there is an easy reference
+to use. 
