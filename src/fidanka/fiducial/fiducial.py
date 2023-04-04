@@ -14,6 +14,9 @@ from scipy.interpolate import splrep, BSpline, interp1d
 
 from tqdm import tqdm
 
+import warnings
+import hashlib
+
 FARRAY_1D = npt.NDArray[np.float64]
 FARRAY_2D_2C = npt.NDArray[[FARRAY_1D, FARRAY_1D]]
 FARRAY_2D_3C = npt.NDArray[[FARRAY_1D, FARRAY_1D, FARRAY_1D]]
@@ -26,7 +29,8 @@ def ridge_bounding(
         a1 : FARRAY_1D,
         a2 : FARRAY_1D,
         binsLeft : FARRAY_1D,
-        histBins : Union[int, str]='auto'
+        histBins : Union[int, str]=50,
+        allowMax : bool=False,
         ) -> FARRAY_2D_4C:
     """
     Find a ridge line for some data x=a1, y=a2 binned along a2 in bins whos
@@ -48,9 +52,13 @@ def ridge_bounding(
         binsLeft : ndarray[float64]
             left (bottom) edges of bins along a2 axis. Bin size will be
             calculated from binsLeft[1]-binsLeft[0]
-        histBins : Union[int,str], default='auto'
-            Number of bins to use when generating the histogram. Will default to
-            auto. See numpy histogram documentation for valid stings to use.
+        histBins : Union[int,str], default=50
+            Number of bins to use when generating the histogram. See numpy
+            histogram documentation for valid stings to use.
+        allowMax : bool, default=False
+            If true, if the fitting fails for a given bin then the bin will be
+            filled with the max value of the histogram. If false, the bin will
+            be filled with nans.
 
     Returns
     -------
@@ -87,19 +95,27 @@ def ridge_bounding(
         histV, histLE = np.histogram(Xss,bins=histBins)
         histC = (histLE + (histLE[1] - histLE[0])/2)[:-1]
         try:
-            fit = curve_fit(
-                    gaus,
-                    histC,
-                    histV,
-                    p0=[max(histV),histC[histV.argmax()],0.01]
-                    )
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                fit = curve_fit(
+                        gaus,
+                        histC,
+                        histV,
+                        p0=[max(histV),histC[histV.argmax()],0.01]
+                        )
             ridgeLine[0,binID] = fit[0][1]
             ridgeLine[1,binID] = (left+right)/2
             ridgeLine[2,binID] = np.percentile(Xss,4)
             ridgeLine[3,binID] = np.percentile(Xss,96)
         except RuntimeError:
-            print(f"Unable to fit for bin {binID} from {left}->{right} with {cut.shape[0]} targets")
-            ridgeLine[:,binID] = np.nan
+            lenOkay = cut[cut == True].shape[0]
+            print(f"Unable to fit for bin {binID} from {left}->{right} with {lenOkay} targets")
+            if len(histV) > 1 and allowMax:
+                print("Falling back to max value")
+                ridgeLine[:, binID] = histC[np.argmax(histV)]
+            elif len(histV) > 1 and not allowMax:
+                print("Falling back to nan")
+                ridgeLine[:, binID] = np.nan
     return ridgeLine[:, 1:-1]
 
 
@@ -553,14 +569,19 @@ def noise_robust_spline_peak_extraction(
     """
     srange = np.linspace(smin, smax, sn)
     sp, sd = list(), list()
+    cleanColor = color[~np.isnan(color)]
+    cleanDensity = density[~np.isnan(color)]
 
     for s in srange:
-        tck = splrep(color, density, s=s)
-        splineVals = BSpline(*tck)(color)
-        peaks, _ = find_peaks(splineVals)
+        try:
+            tck = splrep(cleanColor, cleanDensity, s=s)
+            splineVals = BSpline(*tck)(cleanColor)
+            peaks, _ = find_peaks(splineVals)
 
-        sp.append(color[peaks].values)
-        sd.append(density[peaks])
+            sp.append(cleanColor[peaks])
+            sd.append(cleanDensity[peaks])
+        except TypeError as e:
+            print(f"Error: {e}, s={s}")
 
     spp, sdd = np.hstack(sp), np.hstack(sd)
     return spp, sdd
@@ -685,7 +706,8 @@ def approximate_fiducial_line_function(
         mag : FARRAY_1D,
         percLow : float = 1,
         percHigh : float = 99,
-        binSize : float = 0.1
+        binSize : float = 0.1,
+        allowMax : bool = False,
         ) -> Callable:
     """
     Get an approximate fiducua line from a CMD using the basic ridge bounding
@@ -703,6 +725,11 @@ def approximate_fiducial_line_function(
             Upper bound percentile to base range on
         binSize : float
             Spacing between each left bin edge to each right bin edge
+        allowMax : bool, default=False
+            If true then the ridge bounding algorithm will allow the maximum
+            value in the color distribution to be used as a fiducial point if
+            the gaussian fitting fails. If false and if the gaussian curve fit
+            failes then a nan will be used.
 
     Returns
     -------
@@ -713,8 +740,8 @@ def approximate_fiducial_line_function(
 
     """
     binsLeft, _ = mag_bins(mag, percLow, percHigh, binSize)
-    fiducualLine = ridge_bounding(color, mag, binsLeft)
-    ff = interp1d(fiducualLine[1], fiducualLine[0], bounds_error=False, fill_value='extrapolate')
+    fiducialLine = ridge_bounding(color, mag, binsLeft, allowMax=allowMax)
+    ff = interp1d(fiducialLine[1], fiducialLine[0], bounds_error=False, fill_value='extrapolate')
     return ff
 
 def verticalize_CMD(
@@ -722,7 +749,8 @@ def verticalize_CMD(
         mag : FARRAY_1D,
         percLow : float = 1,
         percHigh : float = 99,
-        binSize : float = 0.1
+        binSize : float = 0.1,
+        allowMax : bool = False,
         ) -> Tuple[FARRAY_1D, Callable]:
     """
     Given some CMD fit an approximate fiducual line and use that to verticalize
@@ -740,6 +768,11 @@ def verticalize_CMD(
             Upper bound percentile to base range on
         binSize : float
             Spacing between each left bin edge to each right bin edge
+        allowMax : bool, default=False
+            If true then the ridge bounding algorithm will allow the maximum
+            value in the color distribution to be used as a fiducial point if
+            the gaussian fitting fails. If false and if the gaussian curve fit
+            failes then a nan will be used.
 
     Returns
     -------
@@ -751,7 +784,7 @@ def verticalize_CMD(
             of magnitude (so as to make it a one-to-one function)
 
     """
-    ff = approximate_fiducial_line_function(color, mag, percLow=percLow, percHigh=percHigh, binSize=binSize)
+    ff = approximate_fiducial_line_function(color, mag, percLow=percLow, percHigh=percHigh, binSize=binSize, allowMax=allowMax)
     vColor = color - ff(mag)
     return vColor, ff
 
@@ -771,7 +804,8 @@ def fiducial_line(
         splineSmoothMax : float = 1,
         splineSmoothN : int = 200,
         colorSigCut : float = 5,
-        pbar : bool = True
+        pbar : bool = True,
+        allowMax : bool = False,
         ) -> FARRAY_2D_2C:
     """
 
@@ -820,6 +854,11 @@ def fiducial_line(
             Flag controlling whether a progress bar is written to standard output.
             This will marginally slow down your code; however, its a very small
             effect and I generally find it helpful to have this turned on.
+        allowMax : bool, default=False
+            If true then the ridge bounding algorithm will allow the maximum
+            value in the color distribution to be used as a fiducial point if
+            the gaussian fitting fails. If false and if the gaussian curve fit
+            failes then a nan will be used.
 
     Returns
     -------
@@ -831,7 +870,8 @@ def fiducial_line(
     """
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
     binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize)
-    vColor, ff = verticalize_CMD(color, mag, percLow, percHigh, appxBinSize)
+    vColor, ff = verticalize_CMD(color, mag, percLow, percHigh, appxBinSize, allowMax=allowMax)
+    np.savez("checkData.bin", color=color, mag=mag, binsLeft=binsLeft, binsRight=binsRight, vColor=vColor)
     density = MC_convex_hull_density_approximation(
             filter1,
             filter2,

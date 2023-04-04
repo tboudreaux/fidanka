@@ -1,1 +1,1 @@
-from fidanka.fiducial import *
+from .fiducial import fiducial_line
