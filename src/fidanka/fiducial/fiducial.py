@@ -1,4 +1,5 @@
 from fidanka.exception.exception import shape_dimension_check
+from fidanka.warn.warnings import warning_traceback
 
 import numpy as np
 import pandas as pd
@@ -16,6 +17,9 @@ from tqdm import tqdm
 
 import warnings
 import hashlib
+
+import logging
+import sys
 
 FARRAY_1D = npt.NDArray[np.float64]
 FARRAY_2D_2C = npt.NDArray[[FARRAY_1D, FARRAY_1D]]
@@ -360,7 +364,7 @@ def MC_convex_hull_density_approximation(
 
     density = np.empty_like(filter1)
 
-    for i in tqdm(range(mcruns), disable=not pbar):
+    for i in tqdm(range(mcruns), disable=not pbar, desc="Monte Carlo Density"):
         f1s = shift_photometry_by_error(filter1, error1)
         f2s = shift_photometry_by_error(filter2, error1)
 
@@ -622,8 +626,12 @@ def histogram_peak_extraction(
     Returns
     -------
         cHighest : float
-            color of highest peak in the spline peak distribution
+            color of highest peak in the spline peak distribution.
+            If spp has a length of 0 (i.e. no point falls within the bin)
+            then np.nan is returned.
     """
+    if spp.shape[0] == 0:
+        return np.nan
     medianColor = np.median(spp)
     stdColor = np.std(spp)
 
@@ -806,6 +814,7 @@ def fiducial_line(
         colorSigCut : float = 5,
         pbar : bool = True,
         allowMax : bool = False,
+        verbose : bool = False,
         ) -> FARRAY_2D_2C:
     """
 
@@ -859,6 +868,9 @@ def fiducial_line(
             value in the color distribution to be used as a fiducial point if
             the gaussian fitting fails. If false and if the gaussian curve fit
             failes then a nan will be used.
+        verbose : bool, default=False
+            Flag to control whether or not to print out information about the
+            fiducial line fitting process. This is useful for debugging.
 
     Returns
     -------
@@ -868,6 +880,21 @@ def fiducial_line(
             the coordinates of the ridgeLine along the a2 axis (these
             are the infered centers points of the bins)
     """
+    logger = logging.getLogger()
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    if verbose:
+        logger.setLevel(logging.INFO)
+        handler.setLevel(logging.INFO)
+    else:
+        logger.setLevel(logging.WARNING)
+        handler.setLevel(logging.WARNING)
+
+
+    warnings.showwarning = warning_traceback
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
     binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize)
     vColor, ff = verticalize_CMD(color, mag, percLow, percHigh, appxBinSize, allowMax=allowMax)
@@ -883,9 +910,12 @@ def fiducial_line(
             pbar=pbar)
 
     fiducial=np.zeros(shape=(binsLeft.shape[0],2))
-    for binID, (left, right) in enumerate(zip(binsLeft, binsRight)):
+    logger.info("Fitting fiducial line to density...")
+    for binID, (left, right) in tqdm(enumerate(zip(binsLeft, binsRight)), disable=verbose, desc="Fitting fiducial line to density", total=len(binsLeft)):
+        logger.info(f"Working on bin {binID}")
+        logger.info(f"\tDensity...")
+        logger.info(f"\tSpline based density peak extraction...")
         dC, cC = density_color_cut(density, vColor, mag, left, right)
-
         cHighest = spline_based_density_peak_extraction(
                 cC,
                 dC,
@@ -894,10 +924,16 @@ def fiducial_line(
                 splineSmoothN,
                 colorSigCut
                 )
-
+        logger.info(f"\tFiducial point found at {cHighest}")
         fiducial[binID,0] = cHighest
         fiducial[binID,1] = (left+right)/2
 
+    logger.info("Completed fitting fiducial line to density!")
+
     fiducial[:,0] = fiducial[:,0] + ff(fiducial[:, 1])
+
+    # remove all rows of fiducial which contain a nan value
+    logger.info("Removing nan values from fiducial line...")
+    fiducial = fiducial[~np.isnan(fiducial).any(axis=1)]
 
     return fiducial
