@@ -267,7 +267,8 @@ def color_mag_from_filters(
 
 def shift_photometry_by_error(
         phot : Union[FARRAY_1D, pd.Series],
-        err : Union[FARRAY_1D, pd.Series]
+        err : Union[FARRAY_1D, pd.Series],
+        baseSampling : FARRAY_1D,
         ) -> FARRAY_1D:
     """
     Shift each point, p_i, in phot by some amount sampled from a normal
@@ -280,6 +281,11 @@ def shift_photometry_by_error(
             Nominal values of Photometry (single filter)
         err : Union[ndarray[float64], pd.Series]
             One sigma uncertainties in Photometry.
+        baseSampling : ndarray[float64]
+            Random samples from a normal distribution with mu = 0 and sig = 1
+            which will be rescaled to the correct standard deviation and
+            used to shift the photometry by the error. Must have the same
+            shape as filter1 and filter2.
 
     Returns
     -------
@@ -290,10 +296,8 @@ def shift_photometry_by_error(
     """
     shape_dimension_check(phot, err)
 
-    def pdf(pe):
-        return pe[0]+np.random.choice((-1, 1))*np.random.normal(loc=0, scale=pe[1])
+    shiftedPhot = phot + np.multiply(baseSampling, err)
 
-    shiftedPhot = np.apply_along_axis(pdf, 0, np.vstack((phot, err)))
     return shiftedPhot
 
 def MC_convex_hull_density_approximation(
@@ -364,9 +368,11 @@ def MC_convex_hull_density_approximation(
 
     density = np.empty_like(filter1)
 
-    for i in tqdm(range(mcruns), disable=not pbar, desc="Monte Carlo Density"):
-        f1s = shift_photometry_by_error(filter1, error1)
-        f2s = shift_photometry_by_error(filter2, error1)
+    baseSampling = np.random.default_rng().normal(size=(mcruns, 2, error1.shape[0]))
+
+    for i, bs in tqdm(enumerate(baseSampling), disable=not pbar, desc="Monte Carlo Density", total=baseSampling.shape[0]):
+        f1s = shift_photometry_by_error(filter1, error1, bs[0])
+        f2s = shift_photometry_by_error(filter2, error2, bs[1])
 
         colorS, magS = color_mag_from_filters(f1s, f2s, reverseFilterOrder)
 
