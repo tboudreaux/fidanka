@@ -3,6 +3,7 @@ from fidanka.warn.warnings import warning_traceback
 
 import numpy as np
 import pandas as pd
+import os
 
 import numpy.typing as npt
 from typing import Union, Tuple, Callable
@@ -177,6 +178,7 @@ def instantaious_hull_density(
 
 
 def hull_density(
+
         X: FARRAY_1D,
         Y : FARRAY_1D,
         n : int = 100
@@ -821,6 +823,8 @@ def fiducial_line(
         pbar : bool = True,
         allowMax : bool = False,
         verbose : bool = False,
+        cacheDensity : bool = False,
+        cacheDensityName : str = 'CMDDensity.npz',
         ) -> FARRAY_2D_2C:
     """
 
@@ -877,6 +881,17 @@ def fiducial_line(
         verbose : bool, default=False
             Flag to control whether or not to print out information about the
             fiducial line fitting process. This is useful for debugging.
+        cacheDensity : bool, default=False
+            Flag to control whether or not to cache the density calculation.
+            This can be useful if you are going to be calling this function
+            multiple times with the same data. However, if you are going to be
+            calling this function multiple times with different data then
+            you should not use this flag.
+        cacheDensityName : str, default='CMDDensity.npz'
+            Name of the file to use to cache the density calculation. This is
+            only used if cacheDensity is True. If the file does not
+            exist then it will be created. If the file does exist then it will
+            be loaded.
 
     Returns
     -------
@@ -904,16 +919,29 @@ def fiducial_line(
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
     binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize)
     vColor, ff = verticalize_CMD(color, mag, percLow, percHigh, appxBinSize, allowMax=allowMax)
-    np.savez("checkData.bin", color=color, mag=mag, binsLeft=binsLeft, binsRight=binsRight, vColor=vColor)
-    density = MC_convex_hull_density_approximation(
-            filter1,
-            filter2,
-            error1,
-            error2,
-            reverseFilterOrder,
-            convexHullPoints=convexHullPoints,
-            mcruns=mcruns,
-            pbar=pbar)
+
+    if cacheDensity and os.path.exists(cacheDensityName):
+        logger.info("Using cached density...")
+        loaded = np.load(cacheDensityName)
+        density = loaded["density"]
+        mcrunsLoaded = loaded["mcruns"]
+        if mcrunsLoaded != mcruns:
+            logger.debug(f"mcrunsLoaded: {mcrunsLoaded}")
+            raise ValueError(f"mcruns does not match cached value! ({mcruns} != {mcrunsLoaded})")
+    else:
+        density = MC_convex_hull_density_approximation(
+                filter1,
+                filter2,
+                error1,
+                error2,
+                reverseFilterOrder,
+                convexHullPoints=convexHullPoints,
+                mcruns=mcruns,
+                pbar=pbar)
+
+        if cacheDensity:
+            with open(cacheDensityName, 'wb') as f:
+                np.savez(f , density=density, mcruns=mcruns)
 
     fiducial=np.zeros(shape=(binsLeft.shape[0],2))
     logger.info("Fitting fiducial line to density...")
