@@ -13,6 +13,7 @@ from scipy.spatial import ConvexHull
 from scipy.spatial.distance import cdist
 from scipy.signal import savgol_filter, find_peaks
 from scipy.interpolate import splrep, BSpline, interp1d
+from scipy.spatial._qhull import ConvexHull as ConvexHullType
 
 from tqdm import tqdm
 
@@ -128,7 +129,7 @@ def instantaious_hull_density(
         r0: R2_VECTOR,
         ri: FARRAY_2D_2C,
         n : int=100
-        ) -> np.float64:
+        ) -> Tuple[np.float64, ConvexHullType]:
     """
     Calculate the density at a given point in a dataset in a way which keeps
     the counting statistics for each density calculation uniform. In order to
@@ -167,14 +168,17 @@ def instantaious_hull_density(
     -------
         density : float64
             The approximate density at ri embeded within the r0 data field
+        hull : ConvexHull
+            The fully computed convex hull of the n closest points to ri within
+            the ri data field. Computed by scipy.spatial.ConvexHull (qhull)
     """
     distance = cdist(r0.reshape(1,2), ri)[0]
     partition = np.argpartition(distance, n)[:n]
     hullPoints = ri[partition]
     hull = ConvexHull(hullPoints)
-    density = hullPoints.shape[0]/hull.area
+    density = hullPoints.shape[0]/hull.volume
 
-    return density
+    return density, hull
 
 
 def hull_density(
@@ -218,7 +222,7 @@ def hull_density(
 
     r = np.vstack((X, Y)).T
     density = np.apply_along_axis(
-            lambda r0: instantaious_hull_density(r0, r, n=n),
+            lambda r0: instantaious_hull_density(r0, r, n=n)[0],
             1,
             r
             )
