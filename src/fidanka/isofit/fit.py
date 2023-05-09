@@ -1,5 +1,6 @@
 from fidanka.isochrone.isochrone import shift_isochrone
 from fidanka.isochrone.isochrone import interp_isochrone_age
+from fidanka.fiducial.fiducial import fiducial_line
 
 import numpy as np
 import pandas as pd
@@ -41,6 +42,51 @@ def pfD(
             Function of form d(x) which gives the distance between r and I(x)
     """
     return lambda m: np.sqrt((I(m) - r[0])**2 + (m - r[1])**2)
+
+def get_synthPop_chi2(
+        observedFiducial : FARRAY_2D_2C,
+        theoreticalPop : FARRAY_2D_2C,
+        distance : float = 0,
+        E_BV : float = 0,
+        reversedFilterOrder : bool = False,
+        reduced : bool = True,
+        ) -> float:
+    theoreticalFiducual = fiducial_line(theoreticalPop[:,0], theoreticalPop[:,1],
+                                        theoreticalPop[:,2], theoreticalPop[:,3],
+                                        reverseFilterOrder=reversedFilterOrder,
+                                        mcruns=1)
+
+    modelColor = theoreticalFiducual[:,0] - theoreticalFiducual[:,1]
+    if reversedFilterOrder:
+        modelMag = theoreticalFiducual[:,1]
+    else:
+        modelMag = theoreticalFiducual[:,0]
+    modelAptColor, modelAptMag = shift_isochrone(modelColor, modelMag, distance, E_BV)
+
+    f = interp1d(
+            modelAptMag,
+            modelAptColor,
+            bounds_error=False,
+            fill_value='extrapolate'
+            )
+
+    diffs = observedFiducial[:, 0] - f(observedFiducial[:, 1])
+    sortedFiducial = observedFiducial[observedFiducial[:,1].argsort()]
+    minDist = np.empty(shape=(sortedFiducial.shape[0]))
+    minDist[:] = np.nan
+    for idx, point in enumerate(sortedFiducial):
+        d = pfD(point, f)
+        nearest = minimize(d, point[1], method='Nelder-Mead')
+        if not nearest.success:
+            print(f"Warning: {nearest.message}")
+        else:
+            minDist[idx] = d(nearest.x)
+    minDist = minDist[~np.isnan(minDist)]
+    chi2 = np.sum(np.apply_along_axis(np.square, 0, minDist))
+    if reduced:
+        chi2 = chi2 / minDist.shape[0]
+    return chi2
+
 
 def get_ISO_CMD_Chi2(
         iso : pd.DataFrame,
@@ -175,6 +221,9 @@ def optimize(
     assert isinstance(optimized, OptimizeResult)
 
     return {'opt': optimized, 'iso': isochrone, 'fiducial': fiducial}
+
+def optimize_theoretical_population(
+
 
 def order_best_fit_result(
         optimizationResults: dict[str, dict[float, dict[float, CHI2R]]]

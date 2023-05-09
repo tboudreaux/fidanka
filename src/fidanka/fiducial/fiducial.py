@@ -1,5 +1,6 @@
 from fidanka.exception.exception import shape_dimension_check
 from fidanka.warn.warnings import warning_traceback
+# from fidanka.ext.nearest_neighbors import nearest_neighbors
 
 import numpy as np
 import pandas as pd
@@ -8,12 +9,13 @@ import os
 import numpy.typing as npt
 from typing import Union, Tuple, Callable
 
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, fsolve, newton, brentq, ridder
 from scipy.spatial import ConvexHull
 from scipy.spatial.distance import cdist
 from scipy.signal import savgol_filter, find_peaks
 from scipy.interpolate import splrep, BSpline, interp1d
 from scipy.spatial._qhull import ConvexHull as ConvexHullType
+from scipy.stats import norm
 
 from tqdm import tqdm
 
@@ -22,6 +24,8 @@ import hashlib
 
 import logging
 import sys
+
+IARRAY_1D = npt.NDArray[np.int32]
 
 FARRAY_1D = npt.NDArray[np.float64]
 FARRAY_2D_2C = npt.NDArray[[FARRAY_1D, FARRAY_1D]]
@@ -124,12 +128,11 @@ def ridge_bounding(
                 ridgeLine[:, binID] = np.nan
     return ridgeLine[:, 1:-1]
 
-
-def instantaious_hull_density(
+def instantaious_hull_density_cpp(
         r0: R2_VECTOR,
         ri: FARRAY_2D_2C,
         n : int=100
-        ) -> Tuple[np.float64, ConvexHullType]:
+        ) -> Tuple[np.float64, ConvexHullType, IARRAY_1D]:
     """
     Calculate the density at a given point in a dataset in a way which keeps
     the counting statistics for each density calculation uniform. In order to
@@ -171,6 +174,64 @@ def instantaious_hull_density(
         hull : ConvexHull
             The fully computed convex hull of the n closest points to ri within
             the ri data field. Computed by scipy.spatial.ConvexHull (qhull)
+        partition : ndarray[int]
+            The indicies of the n closest points to ri within the ri data field.
+    """
+    partition = nearest_neighbors(r0, ri, n)
+    hullPoints = ri[partition]
+    hull = ConvexHull(hullPoints)
+    density = hullPoints.shape[0]/hull.volume
+
+    return density, hull, partition
+
+def instantaious_hull_density(
+        r0: R2_VECTOR,
+        ri: FARRAY_2D_2C,
+        n : int=100
+        ) -> Tuple[np.float64, ConvexHullType, IARRAY_1D]:
+    """
+    Calculate the density at a given point in a dataset in a way which keeps
+    the counting statistics for each density calculation uniform. In order to
+    do this four steps.
+
+        1. Calculate the euclidian distance between the point in question (ri)
+        and every other point (r0[j]) in the data set.
+        2. Partition the 50 smallest elements from the calculated distance array
+        3. Use those indicies to select the 50 points from r0 which are the
+        closest to ri
+        4. Find the convex hull of those 50 (it will be 50 not 51 as r0 is
+        assumed to be a member of ri so there will always be at least one
+        distance of 0 in the distance array which is the self distance)
+        5. Define and return the area as the number of points (n) / the area of
+        the convex hull
+
+    This method dynamically varies the area considered when calculating the
+    density in order to maintain a fixed number of samples per area bin.
+
+    Parameters
+    ----------
+        r0 : ndarray[[float64, float64]]
+            x, y coordinates of the point where you wish to calculate the
+            density of. Assumed to be a member of ri. If this is not a member
+            of ri the algorithm should still work under the constraint that the
+            data is well distributed in all directions around r0, otherwise the
+            area calculation could be off.
+        ri : ndarray[[ndarray[float64], ndarray[float64]]]
+            x,y coordinates of all data points. This should have the shape
+            (n, 2) where n is the numbe of data points
+        n : int, default=100
+            Number of closest points to considered when finding the convex hull
+            used to define the area.
+
+    Returns
+    -------
+        density : float64
+            The approximate density at ri embeded within the r0 data field
+        hull : ConvexHull
+            The fully computed convex hull of the n closest points to ri within
+            the ri data field. Computed by scipy.spatial.ConvexHull (qhull)
+        partition : ndarray[int]
+            The indicies of the n closest points to ri within the ri data field.
     """
     distance = cdist(r0.reshape(1,2), ri)[0]
     partition = np.argpartition(distance, n)[:n]
@@ -178,7 +239,7 @@ def instantaious_hull_density(
     hull = ConvexHull(hullPoints)
     density = hullPoints.shape[0]/hull.volume
 
-    return density, hull
+    return density, hull, partition
 
 
 def hull_density(
@@ -342,7 +403,9 @@ def MC_convex_hull_density_approximation(
             reverseFilterOrder is True then filter2 is the magnitude
         mcruns : int, default=10
             Number of monte carlo runs to use when calculating the density. Note
-            that increasing this will linearlly slow down your code.
+            that increasing this will linearlly slow down your code. If
+            mcruns is set to 1 then the density will be calculated without
+            accounting for uncertainty.
         convexHullPoints : int, default=100
             Number of closest points to considered when finding the convex hull
             used to define the area in the instantaious_hull_density function.
@@ -368,19 +431,26 @@ def MC_convex_hull_density_approximation(
 
     """
 
-    shape_dimension_check(filter1, error1)
-    shape_dimension_check(filter2, error2)
+    if mcruns > 1:
+        shape_dimension_check(filter1, error1)
+        shape_dimension_check(filter2, error2)
     shape_dimension_check(filter1, filter2)
 
     density = np.empty_like(filter1)
 
-    baseSampling = np.random.default_rng().normal(size=(mcruns, 2, error1.shape[0]))
+    if mcruns > 1:
+        baseSampling = np.random.default_rng().normal(size=(mcruns, 2, error1.shape[0]))
+    else:
+        baseSampling = np.zeros(shape=(1, 2, filter1.shape[0]))
+        pbar = False
 
     for i, bs in tqdm(enumerate(baseSampling), disable=not pbar, desc="Monte Carlo Density", total=baseSampling.shape[0]):
-        f1s = shift_photometry_by_error(filter1, error1, bs[0])
-        f2s = shift_photometry_by_error(filter2, error2, bs[1])
-
-        colorS, magS = color_mag_from_filters(f1s, f2s, reverseFilterOrder)
+        if mcruns > 1:
+            f1s = shift_photometry_by_error(filter1, error1, bs[0])
+            f2s = shift_photometry_by_error(filter2, error2, bs[1])
+            colorS, magS = color_mag_from_filters(f1s, f2s, reverseFilterOrder)
+        else:
+            colorS, magS = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
 
         tDensity = hull_density(colorS, magS, n=convexHullPoints)
 
@@ -523,7 +593,7 @@ def density_color_cut(
     densityCut = densityCut[colorCut.argsort()]
     colorCut = colorCut[colorCut.argsort()]
 
-    if smooth:
+    if smooth and len(densityCut) > 50:
         densityCut = savgol_filter(densityCut, 50, 2)
     return densityCut, colorCut
 
@@ -656,6 +726,11 @@ def histogram_peak_extraction(
 
     return cHighest
 
+def percentage_within_n_standard_deviations(n):
+    cdf_n = norm.cdf(n)
+    percentage = (2 * cdf_n - 1) * 100
+    return percentage
+
 def spline_based_density_peak_extraction(
         color : FARRAY_1D,
         density : FARRAY_1D,
@@ -663,7 +738,7 @@ def spline_based_density_peak_extraction(
         smax : float,
         sn : int,
         sf : float
-        ) -> float:
+        ) -> Tuple[float, float, float]:
     """
     Extract the peak density of a density vs. color distribution using a spline
     based ensembell smoothing technique. Each spline will have a different
@@ -712,6 +787,12 @@ def spline_based_density_peak_extraction(
             that the spline parameter space is extremply smooth and only one
             peak is extracted over all smoothing factors then this is simply
             the value of that peak.
+        color5th : float
+            5th percentile of the color distribution. This is used to set the
+            lower bound of the color range for the fiducial line.
+        color95th : float
+            95th percentile of the color distribution. This is used to set the
+            upper bound of the color range for the fiducial line.
     """
     spp, sdd = noise_robust_spline_peak_extraction(color, density, smin, smax, sn)
 
@@ -719,7 +800,27 @@ def spline_based_density_peak_extraction(
         cHighest = histogram_peak_extraction(spp, sdd, sf)
     else:
         cHighest = np.unique(spp)[0]
-    return cHighest
+    cHighest = color[np.argmax(density)]
+    sigma = 1
+    percentile = 100 - percentage_within_n_standard_deviations(sigma)
+    densityPercentile = np.percentile(density, percentile)
+    shiftedDensity = density - densityPercentile
+    roots = list()
+    for idx, (ld, ud, lc, uc) in enumerate(zip(shiftedDensity[:-1], shiftedDensity[1:], color[:-1], color[1:])):
+        if np.sign(ld) != np.sign(ud):
+            m = (ld - ud) / (lc - uc)
+            roots.append( lc - (ld / m) )
+    if len(roots) == 0 or len(roots) == 1:
+        print("Not enough roots found")
+        lowerBoundIntersection = np.nan
+        upperBoundIntersection = np.nan
+    elif len(roots) == 2:
+        lowerBoundIntersection = roots[0]
+        upperBoundIntersection = roots[1]
+    else:
+        lowerBoundIntersection = np.min(roots)
+        upperBoundIntersection = np.max(roots)
+    return cHighest, lowerBoundIntersection, upperBoundIntersection
 
 def approximate_fiducial_line_function(
         color : FARRAY_1D,
@@ -808,6 +909,11 @@ def verticalize_CMD(
     vColor = color - ff(mag)
     return vColor, ff
 
+def perp_distance(p0, p1, theta):
+    a = np.cos(theta)*(p1[1]-p0[1])
+    b = np.sin(theta)*(p1[0]-p0[0])
+    return np.abs(a-b)
+
 def fiducial_line(
         filter1 : Union[FARRAY_1D, pd.Series],
         filter2 : Union[FARRAY_1D, pd.Series],
@@ -829,6 +935,7 @@ def fiducial_line(
         verbose : bool = False,
         cacheDensity : bool = False,
         cacheDensityName : str = 'CMDDensity.npz',
+        minMagCut : float = -np.inf,
         ) -> FARRAY_2D_2C:
     """
 
@@ -849,7 +956,9 @@ def fiducial_line(
             reverseFilterOrder is True then filter2 is the magnitude
         mcruns : int, default=10
             Number of monte carlo runs to use when calculating the density. Note
-            that increasing this will linearlly slow down your code.
+            that increasing this will linearlly slow down your code. If mcruns
+            is set to 1 then the density will be calculated using the
+            nominal values (no monte carlo).
         convexHullPoints : int, default=100
             Number of closest points to considered when finding the convex hull
             used to define the area in the instantaious_hull_density function.
@@ -896,6 +1005,10 @@ def fiducial_line(
             only used if cacheDensity is True. If the file does not
             exist then it will be created. If the file does exist then it will
             be loaded.
+        minMagCut : float, default=-np.inf
+            Minimum magnitude to cut on. This is useful if you want to cut out
+            the RGB. Note that this is applied before the overall magnitude
+            cut (percLow and percHigh) is applied.
 
     Returns
     -------
@@ -921,8 +1034,19 @@ def fiducial_line(
 
     warnings.showwarning = warning_traceback
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
+
     binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize)
+
+    # import matplotlib.pyplot as plt
+    # fig, axs = plt.subplots(1,2)
+    #
     vColor, ff = verticalize_CMD(color, mag, percLow, percHigh, appxBinSize, allowMax=allowMax)
+    # axs[0].scatter(vColor, mag, s=1)
+    #
+    # axs[1].scatter(color, mag, s=1)
+    # axs[0].invert_yaxis()
+    # axs[1].invert_yaxis()
+    # plt.show()
 
     if cacheDensity and os.path.exists(cacheDensityName):
         logger.info("Using cached density...")
@@ -947,14 +1071,14 @@ def fiducial_line(
             with open(cacheDensityName, 'wb') as f:
                 np.savez(f , density=density, mcruns=mcruns)
 
-    fiducial=np.zeros(shape=(binsLeft.shape[0],2))
+    fiducial=np.zeros(shape=(binsLeft.shape[0],5))
     logger.info("Fitting fiducial line to density...")
     for binID, (left, right) in tqdm(enumerate(zip(binsLeft, binsRight)), disable=verbose, desc="Fitting fiducial line to density", total=len(binsLeft)):
         logger.info(f"Working on bin {binID}")
         logger.info(f"\tDensity...")
         logger.info(f"\tSpline based density peak extraction...")
         dC, cC = density_color_cut(density, vColor, mag, left, right)
-        cHighest = spline_based_density_peak_extraction(
+        cHighest, c5, c95 = spline_based_density_peak_extraction(
                 cC,
                 dC,
                 splineSmoothMin,
@@ -963,15 +1087,26 @@ def fiducial_line(
                 colorSigCut
                 )
         logger.info(f"\tFiducial point found at {cHighest}")
+        m = (left + right)/2
         fiducial[binID,0] = cHighest
-        fiducial[binID,1] = (left+right)/2
+        fiducial[binID,1] = m
+        fiducial[binID,2] = c5
+        fiducial[binID,3] = c95
 
     logger.info("Completed fitting fiducial line to density!")
 
     fiducial[:,0] = fiducial[:,0] + ff(fiducial[:, 1])
+    fiducial[:,2] = fiducial[:,2] + ff(fiducial[:, 1])
+    fiducial[:,3] = fiducial[:,3] + ff(fiducial[:, 1])
+
+    slope = np.gradient(fiducial[:,3], fiducial[:,1])
+    theta = np.arctan(slope)
+    fiducial[:,4] = perp_distance(fiducial[:,2], fiducial[:,3], theta)
 
     # remove all rows of fiducial which contain a nan value
     logger.info("Removing nan values from fiducial line...")
     fiducial = fiducial[~np.isnan(fiducial).any(axis=1)]
+
+    # fiducial = fiducial[fiducial[:,1] > minMagCut]
 
     return fiducial

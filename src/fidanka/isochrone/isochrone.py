@@ -14,11 +14,31 @@ from scipy.interpolate import interp1d
 
 FARRAY_1D = npt.NDArray[np.float64]
 
+def shift_full_iso(
+        iso : np.ndarray,
+        distance : float,
+        reddening : float,
+        effectiveWavelengths : list
+        ):
+    """
+    Shift the isochrone around in distance and reddining.
+    """
+    mu = 5*np.log10(distance) - 5
+    shifted = np.zeros_like(iso)
+    for ID, (filterValues, eW) in enumerate(zip(iso.T, effectiveWavelengths)):
+        X = calc_extinction_coef(eW)
+        A = X*reddening
+        shifted[:, ID] = filterValues + mu + A
+    return shifted
+
 def shift_isochrone(
         color : Union[FARRAY_1D, pd.Series],
         magnitude : Union[FARRAY_1D, pd.Series],
         distance : float,
-        extinction : float
+        reddening : float,
+        filter1EffectiveWavelength : float = 275,
+        filter2EffectiveWavelength : float = 814,
+        rFilterOrder : bool = True
         ) -> Tuple[Union[FARRAY_1D, pd.Series], Union[FARRAY_1D, pd.Series]]:
     """
     Shift the isochrone around in distance and reddining. Note! This is currently
@@ -35,11 +55,16 @@ def shift_isochrone(
             1D array of magnitude of shape m
         distance : float
             Distance, in parsecs, to shift the isochrone by
-        extinction : float
-            Color excess to shift the isochrone by. NOTE THAT THIS IS
-            NOT CURRENTLY IMPLIMENTED CORRECTLY. WILL NOT AFFECT TESTING
-            WHICH IS WHY I HAVE NOT FIXED IT; HOWEVER, WILL PREVETNT TRUE
-            DISTANCES OR REDDENINGS FROM BEING EXTRACTED
+        reddining : float
+            Reddining, in magnitudes E(B-V)
+        filter1EffectiveWavelength : float, default=275
+            Effective wavelength of the first filter in nanometers
+        filter2EffectiveWavelength : float, default=814
+            Effective wavelength of the second filter in nanometers
+        rFilterOrder : bool, default=True
+            If true reverse the standard filter order. This is used for
+            isochrones that are in the HST filter order.
+
 
     Returns
     -------
@@ -48,10 +73,59 @@ def shift_isochrone(
         aptCol : Union[ndarray[float64], pd.Series]
             Apparent color, shifted by distance and reddining
     """
-    mu = 5*np.log10(distance) - 5 + extinction
-    aptMag = mu + magnitude
-    aptCol = 3.2*extinction + color
+    mu = 5*np.log10(distance) - 5
+    X1 = calc_extinction_coef(filter1EffectiveWavelength)
+    X2 = calc_extinction_coef(filter2EffectiveWavelength)
+    A1 = X1*reddening
+    A2 = X2*reddening
+    aptCol = color + (A1 - A2)
+    if rFilterOrder:
+        aptMag = magnitude + mu + A2
+    else:
+        aptMag = magnitude + mu + A1
     return aptMag, aptCol
+
+def calc_extinction_coef(wEffective, Rv=3.1):
+    """
+    Calculate the extinction coefficient for a given wavelength in nanometers.
+    This is used to calculate the color excess of an isochrone.
+
+    Calculations are based on the CCM 1989 extinction law.
+    Cardelli, Clayton, and Mathis 1989, ApJ, 345, 245
+
+    Parameters
+    ----------
+        wEffective : float
+            Effective wavelength in nanometers
+        Rv : float
+            Ratio of total to selective extinction. Default is 3.1
+
+    Returns
+    -------
+        extinctionCoef : float
+            Extinction coefficient for the given wavelength
+    """
+    iL = 1e3/wEffective
+    if 0.3 <= iL <= 8:
+        a = 0.574*iL**1.61
+        b = -0.527*iL**1.61
+    elif 1.1 <= iL <= 3.3:
+        y = iL - 1.82
+        a = 1 + 0.17699*y - 0.50447*y**2 - 0.02427*y**3 + 0.72085*y**4 + 0.01979*y**5 - 0.77530*y**6 + 0.32999*y**7
+        b = 1.41338*y + 2.28305*y**2 + 1.07233*y**3 - 5.38434*y**4 - 0.62251*y**5 + 5.30260*y**6 - 2.09002*y**7
+    elif 3.3 <= iL <= 8:
+        if 5.9 <= iL <= 8:
+            Fa = -0.04473*(iL - 5.9)**2 - 0.009779*(iL - 5.9)**3
+            Fb = 0.2130*(iL - 5.9)**2 + 0.1207*(iL - 5.9)**3
+        elif iL < 5.9:
+            Fa = Fb = 0
+        else:
+            raise ValueError("Wavelength out of range")
+        a = 1.752 - 0.316*iL - 0.104/((iL - 4.67)**2 + 0.341) + Fa
+        b = -3.090 + 1.825*iL + 1.206/((iL - 4.62)**2 + 0.263) + Fb
+    else:
+        raise ValueError("Wavelength out of range")
+    return (a+b)/Rv
 
 def load_ISO_CMDs(
         root : str
@@ -169,3 +243,17 @@ def interp_isochrone_age(
 
     assert isinstance(interpolated, pd.DataFrame)
     return interpolated
+
+def iso_color_mag(iso, filter1, filter2, reverseFilterOrder : bool = False):
+    if reverseFilterOrder:
+        filter3 = filter2
+    else:
+        filter3 = filter1
+    isoFilter1Name = f"WFC3_UVIS_{filter1}_MAG"
+    isoFilter2Name = f"WFC3_UVIS_{filter2}_MAG"
+    isoFilter3Name = f"WFC3_UVIS_{filter3}_MAG"
+
+    isoColor = iso[isoFilter1Name] - iso[isoFilter2Name]
+    isoMag = iso[isoFilter3Name]
+
+    return isoColor, isoMag

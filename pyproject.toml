@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools", "setuptools-scm", "wheel", "scikit-build", "cmake", "pybind11"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,9 +24,10 @@ dependencies = [
 	"numpy",
 	"scipy",
 	"tqdm",
-	"pandas"
+	"pandas",
+	"pybind11"
 	]
-version = "0.5.1"
+version = "0.5.2"
 
 [project.urls]
 Homepage = "https://github.com/tboudreaux/fidanka"

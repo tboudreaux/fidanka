@@ -49,8 +49,8 @@ def get_interpolated_FeHTable(BC1, BC2, Av, Rv, FeH):
         return newBCs
 
     AvRvKey = f"Av={Av:0.1f}:Rv={Rv:0.1f}"
-    tab1 = load_bol_table(BC1.path)[AvRvKey]
-    tab2 = load_bol_table(BC2.path)[AvRvKey]
+    tab1 = BC1.data[AvRvKey]
+    tab2 = BC2.data[AvRvKey]
 
     interpolated = tab1.apply(lambda x: linearinterpolate(x, tab2))
     return interpolated
