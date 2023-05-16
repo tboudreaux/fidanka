@@ -507,7 +507,7 @@ def renormalize(
     error2 = np.array(error2).reshape(1,len_data)
     df = np.concatenate((filter1,error1,filter2,error2)).T
     df = df[df[:,0].argsort()].T
-    
+
     neighbor_n = 50
     diff = df[0,:-neighbor_n] - df[0,neighbor_n:]
     diff = np.concatenate((np.array([diff[0]]*int(neighbor_n/2)),diff,np.array([diff[-1]]*int(neighbor_n/2))))
@@ -1113,7 +1113,10 @@ def fiducial_line(
         handler.setLevel(logging.WARNING)
 
     if uni_density == True:
+        len_prev = len(filter1)
         filter1, error1, filter2, error2 = renormalize(filter1,filter2,error1,error2)
+        len_renom = len(filter1)
+        mcruns = int(np.ceil(mcruns*(len_prev/len_renom)))
 
     warnings.showwarning = warning_traceback
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
