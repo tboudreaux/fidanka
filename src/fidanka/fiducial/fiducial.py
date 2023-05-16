@@ -500,24 +500,35 @@ def renormalize(
             One sigma uncertainties in Photometry from renomalized filter2.
     """
 
-    df = pd.DataFrame(data={'filter1': filter1, 'error1': error1, 'filter2': filter2, 'error2': error2})
-    num_seg = 100
-    seg = np.linspace(min(df['filter1']),max(df['filter1'])+0.0001,num_seg+1)
-    df_seg = [df[(df['filter1'] >= seg[i]) & (df['filter1'] < seg[i+1])] for i in range(num_seg)]
-    data_count_min = min([len(df) for df in df_seg])
+    len_data = len(filter1)
+    filter1 = np.array(filter1).reshape(1,len_data)
+    filter2 = np.array(filter2).reshape(1,len_data)
+    error1 = np.array(error1).reshape(1,len_data)
+    error2 = np.array(error2).reshape(1,len_data)
+    df = np.concatenate((filter1,error1,filter2,error2)).T
+    df = df[df[:,0].argsort()].T
+    
+    neighbor_n = 50
+    diff = df[0,:-neighbor_n] - df[0,neighbor_n:]
+    diff = np.concatenate((np.array([diff[0]]*int(neighbor_n/2)),diff,np.array([diff[-1]]*int(neighbor_n/2))))
+    max_diff = max(diff)
 
-    while data_count_min < 5:
-        num_seg -= 1
-        seg = np.linspace(min(df['filter1']),max(df['filter1'])+0.0001,num_seg+1)
-        df_seg = [df[(df['filter1'] >= seg[i]) & (df['filter1'] < seg[i+1])] for i in range(num_seg)]
-        data_count_min = min([len(df) for df in df_seg])
-    target_num = max([len(df) for df in df_seg])
+    while np.abs(max_diff) < 0.001:
+        neighbor_n *= 2
+        diff = df[0,:-neighbor_n] - df[0,neighbor_n:]
+        diff = np.concatenate((np.array([diff[0]]*int(neighbor_n/2)),diff,np.array([diff[-1]]*int(neighbor_n/2))))
+        max_diff = max(diff)
 
-    for i in range(num_seg):
-        df_seg[i] = df_seg[i].iloc[np.concatenate((np.arange(len(df_seg[i])),np.random.randint(0,high=len(df_seg[i]),size=(target_num - len(df_seg[i])))))]
-    df = pd.concat(df_seg)
+    repeat_time = [int(np.ceil(diff[i]/max_diff)) for i in range(len(df[0]))]
+    repeat_idx = np.concatenate(tuple([np.array([i]*repeat_time[i]) for i in range(len(repeat_time))])).flatten()
+    df = df[:,repeat_idx]
+    filter1_renomalized = df[0]
+    error1_renomalized = df[1]
+    filter2_renomalized = df[2]
+    error2_renomalized = df[3]
 
-    return df['filter1'].values, df['error1'].values, df['filter2'].values, df['error2'].values
+
+    return filter1_renomalized, error1_renomalized, filter2_renomalized, error2_renomalized
 
 
 
