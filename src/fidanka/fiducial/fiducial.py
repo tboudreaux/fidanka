@@ -441,9 +441,7 @@ def MC_convex_hull_density_approximation(
     shape_dimension_check(filter1, filter2)
 
     density = np.empty_like(filter1)
-    if uni_density == True:
-        filter1, error1, filter2, error2 = renormalize(filter1,error1,filter2,error2)
-        mcrun = mcrun//10 + 1
+
     if mcruns > 1:
         baseSampling = np.random.default_rng().normal(size=(mcruns, 2, error1.shape[0]))
     else:
@@ -513,10 +511,10 @@ def renormalize(
         seg = np.linspace(min(df['filter1']),max(df['filter1'])+0.0001,num_seg+1)
         df_seg = [df[(df['filter1'] >= seg[i]) & (df['filter1'] < seg[i+1])] for i in range(num_seg)]
         data_count_min = min([len(df) for df in df_seg])
-    target_num = max([len(df) for df in df_seg])*10
+    target_num = max([len(df) for df in df_seg])
 
     for i in range(num_seg):
-        df_seg[i] = df_seg[i].iloc[np.random.randint(0,high=len(df_seg[i]),size=target_num)]
+        df_seg[i] = df_seg[i].iloc[np.concatenate((np.arange(len(df_seg[i])),np.random.randint(0,high=len(df_seg[i]),size=(target_num - len(df_seg[i])))))]
     df = pd.concat(df_seg)
 
     return df['filter1'].values, df['error1'].values, df['filter2'].values, df['error2'].values
@@ -1078,6 +1076,9 @@ def fiducial_line(
             Minimum magnitude to cut on. This is useful if you want to cut out
             the RGB. Note that this is applied before the overall magnitude
             cut (percLow and percHigh) is applied.
+        uni_density : bool, default=False
+            Flag controls whether to change the sampling method to achieve a roughly
+            uniform distribution of numbers of data points in filter1 magnitude
 
     Returns
     -------
@@ -1100,6 +1101,8 @@ def fiducial_line(
         logger.setLevel(logging.WARNING)
         handler.setLevel(logging.WARNING)
 
+    if uni_density == True:
+        filter1, error1, filter2, error2 = renormalize(filter1,filter2,error1,error2)
 
     warnings.showwarning = warning_traceback
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
@@ -1134,7 +1137,9 @@ def fiducial_line(
                 reverseFilterOrder,
                 convexHullPoints=convexHullPoints,
                 mcruns=mcruns,
-                pbar=pbar)
+                pbar=pbar,
+                uni_density=uni_density,
+                )
 
         if cacheDensity:
             with open(cacheDensityName, 'wb') as f:
