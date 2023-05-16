@@ -375,7 +375,8 @@ def MC_convex_hull_density_approximation(
         reverseFilterOrder : bool = False,
         mcruns : int = 10,
         convexHullPoints : int = 100,
-        pbar : bool = True
+        pbar : bool = True,
+        uni_density: bool = False,
         ) -> FARRAY_1D:
     """
     Compute the density at each point in a CMD accounting for uncertainty
@@ -413,6 +414,9 @@ def MC_convex_hull_density_approximation(
             Flag controlling whether a progress bar is written to standard output.
             This will marginally slow down your code; however, its a very small
             effect and I generally find it helpful to have this turned on.
+        uni_density : bool, default=False
+            Flag controls whether to change the sampling method to achieve a roughly
+            uniform distribution of numbers of data points in filter1 magnitude
 
     Returns
     -------
@@ -437,7 +441,9 @@ def MC_convex_hull_density_approximation(
     shape_dimension_check(filter1, filter2)
 
     density = np.empty_like(filter1)
-
+    if uni_density == True:
+        filter1, error1, filter2, error2 = renormalize(filter1,error1,filter2,error2)
+        mcrun = mcrun//10 + 1
     if mcruns > 1:
         baseSampling = np.random.default_rng().normal(size=(mcruns, 2, error1.shape[0]))
     else:
@@ -455,7 +461,69 @@ def MC_convex_hull_density_approximation(
         tDensity = hull_density(colorS, magS, n=convexHullPoints)
 
         density[:] = tDensity if i == 0 else (density[:] + tDensity[:])/2
+
+
+
     return density
+
+def renormalize(
+        filter1 : Union[FARRAY_1D, pd.Series],
+        filter2 : Union[FARRAY_1D, pd.Series],
+        error1 : Union[FARRAY_1D, pd.Series],
+        error2 : Union[FARRAY_1D, pd.Series],
+        ) -> Tuple[FARRAY_1D, FARRAY_1D, FARRAY_1D, FARRAY_1D]:
+    """
+    Resample the data in the first place to ensure new data has roughly uniform
+    distribution in filter1 magnitude. To achieve that, data will be segmented by
+    filter1 magnitude. The uniformity is achieved by over sample low density region
+    and undersample high density region.
+    This function is only used when uni_density = True
+
+    Parameters
+    ----------
+        filter1 : Union[ndarray[float64], pd.Series]
+            First filter, will be A in A-B color
+        filter2 : Union[ndarray[float64], pd.Series]
+            Second filter, will be B in A-B color
+        error1 : Union[ndarray[float64], pd.Series]
+            One sigma uncertainties in Photometry from filter1.
+        error2 : Union[ndarray[float64], pd.Series]
+            One sigma uncertainties in Photometry from filter2.
+
+    Returns
+    -------
+        filter1_renomalized : Union[ndarray[float64], pd.Series]
+            Renomalized first filter, will be A in A-B color
+        filter2_renomalized : Union[ndarray[float64], pd.Series]
+            Renomalized second filter, will be B in A-B color
+        error1_renomalized : Union[ndarray[float64], pd.Series]
+            One sigma uncertainties in Photometry from renomalized filter1.
+        error2_renomalized : Union[ndarray[float64], pd.Series]
+            One sigma uncertainties in Photometry from renomalized filter2.
+    """
+
+    df = pd.DataFrame(data={'filter1': filter1, 'error1': error1, 'filter2': filter2, 'error2': error2})
+    num_seg = 100
+    seg = np.linspace(min(df['filter1']),max(df['filter1'])+0.0001,num_seg+1)
+    df_seg = [df[(df['filter1'] >= seg[i]) & (df['filter1'] < seg[i+1])] for i in range(num_seg)]
+    data_count_min = min([len(df) for df in df_seg])
+
+    while data_count_min < 5:
+        num_seg -= 1
+        seg = np.linspace(min(df['filter1']),max(df['filter1'])+0.0001,num_seg+1)
+        df_seg = [df[(df['filter1'] >= seg[i]) & (df['filter1'] < seg[i+1])] for i in range(num_seg)]
+        data_count_min = min([len(df) for df in df_seg])
+    target_num = max([len(df) for df in df_seg])*10
+
+    for i in range(num_seg):
+        df_seg[i] = df_seg[i].iloc[np.random.randint(0,high=len(df_seg[i]),size=target_num)]
+    df = pd.concat(df_seg)
+
+    return df['filter1'].values, df['error1'].values, df['filter2'].values, df['error2'].values
+
+
+
+
 
 def percentile_range(
         X : Union[FARRAY_1D, pd.Series],
@@ -936,6 +1004,7 @@ def fiducial_line(
         cacheDensity : bool = False,
         cacheDensityName : str = 'CMDDensity.npz',
         minMagCut : float = -np.inf,
+        uni_density: bool = False,
         ) -> FARRAY_2D_2C:
     """
 
