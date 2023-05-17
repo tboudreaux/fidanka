@@ -222,7 +222,6 @@ def optimize(
 
     return {'opt': optimized, 'iso': isochrone, 'fiducial': fiducial}
 
-def optimize_theoretical_population(
 
 
 def order_best_fit_result(

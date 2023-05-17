@@ -1,4 +1,5 @@
 from fidanka.isochrone.isochrone import shift_full_iso
+from fidanka.population.utils import sample_n_masses
 
 
 import pickle as pkl
@@ -6,12 +7,44 @@ import numpy as np
 import pandas as pd
 import re
 
+import numpy.typing as npt
+
 from scipy.interpolate import interp1d, LinearNDInterpolator
 from collections.abc import Iterable
 
-FILTERPATTERN = re.compile(r'(?:(?:ACS_WFC_(F\d{3}W)_MAG)|(F\d{3}W))')
+from typing import Union, Tuple, List, Dict, Callable, Optional
 
-def mass_sample(n,mrange=(0.1,1),alpha=-2.68):
+FILTERPATTERN = re.compile(r'(?:(?:ACS_WFC_(F\d{3}W)_MAG)|(F\d{3}W))')
+FARRAY_1D = npt.NDArray[np.float64]
+
+def mass_sample(
+        n : int,
+        mrange : Tuple[float, float] = (0.1,1),
+        alpha : float = -2.68) -> FARRAY_1D:
+    """
+    Sample masses from a power law IMF.
+
+    Parameters
+    ----------
+        n : int
+            Number of samples to draw.
+        mrange : Tuple[float, float], default=(0.1,1)
+            Range of masses to sample from.
+        alpha : float, default=-2.68
+            Power law index of the IMF.
+
+    Returns
+    -------
+        sample : NDArray[float]
+            Array of sampled masses.
+
+    Examples
+    --------
+    Let's sample 10 masses from a power law IMF with a power law index of -2.68
+    between 0.1 and 1 solar masses.
+
+    >>> mass_sample(10, mrange=(0.1,1), alpha=-2.68)
+    """
     sample = np.zeros(n)
     m1 = mrange[1]**(alpha+1) - mrange[0]**(alpha+1)
     m2 = mrange[0]**(alpha+1)
@@ -22,21 +55,133 @@ def mass_sample(n,mrange=(0.1,1),alpha=-2.68):
         sample[i] = sm
     return sample
 
-def inverse_cdf_sample(f, x=None):
+def inverse_cdf_sample(
+        f : Callable[[FARRAY_1D], FARRAY_1D],
+        x : FARRAY_1D = None
+        ) -> Callable[[FARRAY_1D], FARRAY_1D]:
+    """
+    Generate a function that samples from the inverse CDF of a given function.
+
+    Parameters
+    ----------
+        f : Callable[[FARRAY_1D], FARRAY_1D]
+            Function to sample from.
+        x : FARRAY_1D, default=None
+            Domain of the function. If None, defaults to np.linspace(0,1,100000).
+
+    Returns
+    -------
+        inverse_cdf : Callable[[FARRAY_1D], FARRAY_1D]
+            Function that samples from the inverse CDF of f. To evaluate the
+            function, pass an array of uniform random numbers between 0 and 1.
+
+    Examples
+    --------
+    Let's sample from the inverse CDF of a Gaussian distribution. First, we
+    define the Gaussian distribution.
+
+    >>> def gaussian(x, mu=0, sigma=1):
+    ...     return np.exp(-(x-mu)**2/(2*sigma**2))
+
+    Then, we generate the inverse CDF function.
+
+    >>> inverse_cdf = inverse_cdf_sample(gaussian)
+
+    Finally, we sample from the inverse CDF.
+
+    >>> inverse_cdf(np.random.random(10))
+    """
     if x is None:
         x = np.linspace(0,1,100000)
+
     y = f(x)
     cdf_y = np.cumsum(y)
     cdf_y_norm = cdf_y/cdf_y.max()
-    inverse_cdf = interp1d(cdf_y_norm, x, bounds_error=False, fill_value='extrapolate')
+
+    inverse_cdf = interp1d(
+            cdf_y_norm,
+            x,
+            bounds_error=False,
+            fill_value='extrapolate'
+            )
+
     return inverse_cdf
 
-def get_samples(n,f,domain=None):
+def get_samples(
+        n : int,
+        f : Callable[[FARRAY_1D], FARRAY_1D],
+        domain : FARRAY_1D = None
+        ) -> FARRAY_1D:
+    """
+    Sample n values from a given function. The function does not have to be
+    a normalized PDF as the function will be normalized before sampling.
+
+    Parameters
+    ----------
+        n : int
+            Number of samples to draw.
+        f : Callable[[FARRAY_1D], FARRAY_1D]
+            Function to sample from.
+        domain : FARRAY_1D, default=None
+            Domain of the function. If None, defaults to np.linspace(0,1,100000).
+
+    Returns
+    -------
+        samples : NDArray[float]
+            Array of samples.
+
+    Examples
+    --------
+    Let's sample 10 values from a quadratic function over the domain 0,2.
+
+    >>> def quadratic(x):
+    ...     return x**2
+
+    >>> get_samples(10, quadratic, domain=np.linspace(0,2,1000))
+    """
+
     uniformSamples = np.random.random(n)
     shiftedSamples = inverse_cdf_sample(f, x=domain)(uniformSamples)
     return shiftedSamples
 
-def closest(array, target):
+def closest(
+        array : FARRAY_1D,
+        target : float
+        ) -> Tuple[Union[FARRAY_1D, None], Union[FARRAY_1D, None]]:
+    """
+    Find the closest values above and below a given target in an array.
+    If the target is in the array, the function returns the exact target value
+    in both elements of the tuple. If the target is not exactly in the array,
+    the function returns the closest value below the target in the first
+    element of the tuple and the closest value above the target in the second
+    element of the tuple. If the taret is below the minimum value in the array,
+    the first element of the tuple is None. If the target is above the maximum
+    value in the array, the second element of the tuple is None.
+
+    Parameters
+    ----------
+        array : NDArray[float]
+            Array to search.
+        target : float
+            Target value.
+
+    Returns
+    -------
+        closest_lower : Union[NDArray[float], None]
+            Closest value below the target. If the target is below the minimum
+            value in the array, returns None.
+        closest_upper : Union[NDArray[float], None]
+            Closest value above the target. If the target is above the maximum
+            value in the array, returns None.
+
+    Examples
+    --------
+    Let's find the closest values above and below 5 in an array.
+
+    >>> array = np.array([1,2,3,4,5,6,7,8,9,10])
+    >>> closest(array, 5)
+    (5, 6)
+    """
     exact_value = array[array == target]
 
     if exact_value.size > 0:
@@ -57,7 +202,43 @@ def closest(array, target):
 
     return closest_lower, closest_upper
 
-def interpolate_arrays(array_lower, array_upper, target, lower, upper):
+def interpolate_arrays(
+        array_lower : npt.NDArray,
+        array_upper : npt.NDArray,
+        target : float,
+        lower : float,
+        upper : float
+        ) -> npt.NDArray:
+    """
+    Interpolate between two arrays. The arrays must have the same shape.
+
+    Parameters
+    ----------
+        array_lower : NDArray[float]
+            Lower bounding array.
+        array_upper : NDArray[float]
+            Upper bounding array.
+        target : float
+            Target value to interpolate to.
+        lower : float
+            value at lower bounding array
+        upper : float
+            value at upper bounding array
+
+    Returns
+    -------
+        interpolated_array : NDArray[float]
+            Interpolated array at target value.
+
+    Examples
+    --------
+    Let's interpolate between two arrays.
+
+    >>> array_lower = np.array([1,2,3,4,5,6,7,8,9,10])
+    >>> array_upper = np.array([11,12,13,14,15,16,17,18,19,20])
+
+    >>> interpolate_arrays(array_lower, array_upper, 5.5, 5, 6)
+    """
     array_lower = np.array(array_lower)
     array_upper = np.array(array_upper)
 
@@ -110,7 +291,21 @@ def sum_err_mag(m1, m2, s1, s2):
 
 
 class population:
-    def __init__(self, iso, alpha, bf, agePDF, n, minAge, maxAge, minMass, maxMass, artStarFuncs, distance, reddening, magName):
+    def __init__(self,
+                 iso,
+                 alpha,
+                 bf,
+                 agePDF,
+                 n,
+                 minAge,
+                 maxAge,
+                 minMass,
+                 maxMass,
+                 artStarFuncs,
+                 distance,
+                 reddening,
+                 magName,
+                 responseFunctions):
         if isinstance(iso, str):
             with open(iso, 'rb') as f:
                 iso = pkl.load(f)
@@ -169,6 +364,7 @@ class population:
         self._completnessCheckColName = self._goodColumnNames[self._completnessCheckColumnID]
         self._isoFilterCompletenessCheckColName = f"ACS_WFC_{self._completnessCheckColName}_MAG"
         self._mappingFunctions = self._generate_mapping_functions()
+        self._responseFunctions = responseFunctions
 
     def _generate_mapping_functions(self):
         mappingFunctions = list()
@@ -235,20 +431,48 @@ class population:
         youngerIso = self.isoNP[popI][younger]
         olderIso = self.isoNP[popI][older]
         isoAtAge = interpolate_eep_arrays(youngerIso, olderIso, age, younger, older)
-        isoShiftedToDistRed = shift_full_iso(isoAtAge[:, self._goodFilterIdx], self.distance, self.reddening, self._effectiveWavelengths)
+
+        isoShiftedToDistRed = shift_full_iso(isoAtAge[:, self._goodFilterIdx], self.distance, self.reddening, self._effectiveWavelengths,
+                                             self._goodColumnNames, self._responseFunctions)
+
+        massMap = isoAtAge[:,2]
+        sortedMasses = np.sort(massMap)
+        magMap = isoShiftedToDistRed[:, self._completnessCheckColumnID]
+        completnessMap = interp1d(massMap, magMap, kind='linear', bounds_error=False, fill_value=np.nan)
+        completness = lambda m, alpha: self._completness(completnessMap(m))
         resetMass = False
-        mMin = isoAtAge[:, 2].min()
-        mMax = isoAtAge[:, 2].max()
+        mMin = massMap.min()
+        mMax = massMap.max()
         if mass is None:
             resetMass = True
-            mass = mass_sample(1, mrange=(mMin, mMax), alpha=self.alpha)[0]
+            mass = sample_n_masses(1, completness,self.alpha,mMin,mMax)[0]
+            # print("SELECTING MASS ", mass)
         else:
             if isinstance(mass, Iterable):
                 mass = mass[0]
         lowerMass, upperMass = closest(isoAtAge[:,2], mass)
+        if lowerMass == None:
+            lowerMass = mMin
+            upperMass = sortedMasses[1]
+            print("Falling back on end of array for lower mass")
+            print(f"Using masses {lowerMass} and {upperMass}")
+        if upperMass == None:
+            upperMass = mMax
+            lowerMass = sortedMasses[-2]
+            print("Falling back on end of array for upper mass")
+            print(f"Using masses {lowerMass} and {upperMass}")
         lowerMassPoint = isoShiftedToDistRed[isoAtAge[:,2] == lowerMass]
         upperMassPoint = isoShiftedToDistRed[isoAtAge[:,2] == upperMass]
-        targetSample = interpolate_arrays(lowerMassPoint, upperMassPoint, mass, lowerMass, upperMass)[0]
+        try:
+            targetSample = interpolate_arrays(lowerMassPoint, upperMassPoint, mass, lowerMass, upperMass)[0]
+        except AssertionError:
+            print(lowerMassPoint)
+            print(upperMassPoint)
+            print(mass)
+            print(lowerMass)
+            print(upperMass)
+            print(mMin, mMax)
+            raise
 
         for rID, (ID, interpFunc) in enumerate(self.noiseFuncs.items()):
             samples[idx][2+rID] = sum_mag(targetSample[rID], samples[idx][2+rID])
