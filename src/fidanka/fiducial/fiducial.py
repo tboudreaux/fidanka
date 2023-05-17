@@ -375,7 +375,8 @@ def MC_convex_hull_density_approximation(
         reverseFilterOrder : bool = False,
         mcruns : int = 10,
         convexHullPoints : int = 100,
-        pbar : bool = True
+        pbar : bool = True,
+        uni_density: bool = False,
         ) -> FARRAY_1D:
     """
     Compute the density at each point in a CMD accounting for uncertainty
@@ -413,6 +414,9 @@ def MC_convex_hull_density_approximation(
             Flag controlling whether a progress bar is written to standard output.
             This will marginally slow down your code; however, its a very small
             effect and I generally find it helpful to have this turned on.
+        uni_density : bool, default=False
+            Flag controls whether to change the sampling method to achieve a roughly
+            uniform distribution of numbers of data points in filter1 magnitude
 
     Returns
     -------
@@ -455,7 +459,80 @@ def MC_convex_hull_density_approximation(
         tDensity = hull_density(colorS, magS, n=convexHullPoints)
 
         density[:] = tDensity if i == 0 else (density[:] + tDensity[:])/2
+
+
+
     return density
+
+def renormalize(
+        filter1 : Union[FARRAY_1D, pd.Series],
+        filter2 : Union[FARRAY_1D, pd.Series],
+        error1 : Union[FARRAY_1D, pd.Series],
+        error2 : Union[FARRAY_1D, pd.Series],
+        ) -> Tuple[FARRAY_1D, FARRAY_1D, FARRAY_1D, FARRAY_1D]:
+    """
+    Resample the data in the first place to ensure new data has roughly uniform
+    distribution in filter1 magnitude. To achieve that, data will be segmented by
+    filter1 magnitude. The uniformity is achieved by over sample low density region
+    and undersample high density region.
+    This function is only used when uni_density = True
+
+    Parameters
+    ----------
+        filter1 : Union[ndarray[float64], pd.Series]
+            First filter, will be A in A-B color
+        filter2 : Union[ndarray[float64], pd.Series]
+            Second filter, will be B in A-B color
+        error1 : Union[ndarray[float64], pd.Series]
+            One sigma uncertainties in Photometry from filter1.
+        error2 : Union[ndarray[float64], pd.Series]
+            One sigma uncertainties in Photometry from filter2.
+
+    Returns
+    -------
+        filter1_renomalized : Union[ndarray[float64], pd.Series]
+            Renomalized first filter, will be A in A-B color
+        filter2_renomalized : Union[ndarray[float64], pd.Series]
+            Renomalized second filter, will be B in A-B color
+        error1_renomalized : Union[ndarray[float64], pd.Series]
+            One sigma uncertainties in Photometry from renomalized filter1.
+        error2_renomalized : Union[ndarray[float64], pd.Series]
+            One sigma uncertainties in Photometry from renomalized filter2.
+    """
+
+    len_data = len(filter1)
+    filter1 = np.array(filter1).reshape(1,len_data)
+    filter2 = np.array(filter2).reshape(1,len_data)
+    error1 = np.array(error1).reshape(1,len_data)
+    error2 = np.array(error2).reshape(1,len_data)
+    df = np.concatenate((filter1,error1,filter2,error2)).T
+    df = df[df[:,0].argsort()].T
+
+    neighbor_n = 50
+    diff = df[0,:-neighbor_n] - df[0,neighbor_n:]
+    diff = np.concatenate((np.array([diff[0]]*int(neighbor_n/2)),diff,np.array([diff[-1]]*int(neighbor_n/2))))
+    max_diff = max(diff)
+
+    while np.abs(max_diff) < 0.001:
+        neighbor_n *= 2
+        diff = df[0,:-neighbor_n] - df[0,neighbor_n:]
+        diff = np.concatenate((np.array([diff[0]]*int(neighbor_n/2)),diff,np.array([diff[-1]]*int(neighbor_n/2))))
+        max_diff = max(diff)
+
+    repeat_time = [int(np.ceil(diff[i]/max_diff)) for i in range(len(df[0]))]
+    repeat_idx = np.concatenate(tuple([np.array([i]*repeat_time[i]) for i in range(len(repeat_time))])).flatten()
+    df = df[:,repeat_idx]
+    filter1_renomalized = df[0]
+    error1_renomalized = df[1]
+    filter2_renomalized = df[2]
+    error2_renomalized = df[3]
+
+
+    return filter1_renomalized, error1_renomalized, filter2_renomalized, error2_renomalized
+
+
+
+
 
 def percentile_range(
         X : Union[FARRAY_1D, pd.Series],
@@ -987,6 +1064,7 @@ def fiducial_line(
         cacheDensityName : str = 'CMDDensity.npz',
         minMagCut : float = -np.inf,
         method : str = 'waveform',
+        uni_density: bool = False,
         ) -> FARRAY_2D_2C:
     """
 
@@ -1068,6 +1146,9 @@ def fiducial_line(
             some cases. Waveform should generally result in beter fiducial
             lines as it considers more than one magnitude bin at a time. It
             should also be faster than the spline method generally.
+        uni_density : bool, default=False
+            Flag controls whether to change the sampling method to achieve a roughly
+            uniform distribution of numbers of data points in filter1 magnitude
 
     Returns
     -------
@@ -1090,6 +1171,11 @@ def fiducial_line(
         logger.setLevel(logging.WARNING)
         handler.setLevel(logging.WARNING)
 
+    if uni_density == True:
+        len_prev = len(filter1)
+        filter1, error1, filter2, error2 = renormalize(filter1,filter2,error1,error2)
+        len_renom = len(filter1)
+        mcruns = int(np.ceil(mcruns*(len_prev/len_renom)))
 
     warnings.showwarning = warning_traceback
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
@@ -1124,7 +1210,9 @@ def fiducial_line(
                 reverseFilterOrder,
                 convexHullPoints=convexHullPoints,
                 mcruns=mcruns,
-                pbar=pbar)
+                pbar=pbar,
+                uni_density=uni_density,
+                )
 
         if cacheDensity:
             with open(cacheDensityName, 'wb') as f:
