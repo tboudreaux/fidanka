@@ -519,7 +519,7 @@ def renormalize(
         diff = np.concatenate((np.array([diff[0]]*int(neighbor_n/2)),diff,np.array([diff[-1]]*int(neighbor_n/2))))
         max_diff = max(diff)
 
-    repeat_time = [int(np.ceil(diff[i]/max_diff)) for i in range(len(df[0]))]
+    repeat_time = [int(np.ceil(diff[i]/(5*max_diff))) for i in range(len(df[0]))]
     repeat_idx = np.concatenate(tuple([np.array([i]*repeat_time[i]) for i in range(len(repeat_time))])).flatten()
     df = df[:,repeat_idx]
     filter1_renomalized = df[0]
