@@ -11,6 +11,7 @@ import re
 from tqdm import tqdm
 
 from scipy.interpolate import interp1d
+from scipy.integrate import quad
 
 FARRAY_1D = npt.NDArray[np.float64]
 
@@ -30,15 +31,36 @@ def shift_full_iso(
     for ID, (filterValues, eW, name) in enumerate(zip(iso.T, effectiveWavelengths, columnNames)):
         # print(filterValues)
         responseFunction = responseFunctions[name]
+        print(f"Integrating from {responseFunction[1]} to {responseFunction[2]}")
+        df = lambda l : responseFunction[0](l)
+        da = lambda l : (reddening*3.1)*calc_extinction_coef(l)
+        F = quad(df, responseFunction[1], responseFunction[2])[0] 
+        A = quad(da, responseFunction[1], responseFunction[2])[0]
+        norm = 1/F
+        print(f"Normalization factor: {norm}")
+        A = norm*A
+        # import matplotlib.pyplot as plt
+        # plt.plot(np.linspace(responseFunction[1], responseFunction[2], 1000), responseFunction[0](np.linspace(responseFunction[1], responseFunction[2], 1000)))
+        # plt.title(f"Filter {ID} ({name})")
+        # plt.xlabel("Wavelength (nm)")
+        # plt.ylabel("Response")
+        # plt.show()
+        print(f"Total response in filter {ID} ({name}): {F}")
+        print(f"Total extinction in filter {ID} ({name}): {A}")
+        dM = filterValues + A + mu
+        print(f"Total extinction in filter {ID} ({name}): {dM}")
+        print(f"Shifted filter {ID}({name}) by {mu} + {dM} = {mu+dM}")
+        shifted[:, ID] = filterValues + mu + dM
+        exit()
 
-        print(eW)
-        X = calc_extinction_coef(eW)
-        print(f"Extinction coefficient for filter {ID} @ {eW}nm: {X}")
-        A = (X*3.1)*reddening
-        print(f"Extinction in filter {ID}: {A}")
-        shifted[:, ID] = filterValues + mu + A
-        print(f"Shifted filter {ID} by {mu} + {A} = {mu+A}")
-        print(f"Shifted filter {ID} by {mu+A} = {shifted[:, ID]}")
+        # print(eW)
+        # X = calc_extinction_coef(eW)
+        # print(f"Extinction coefficient for filter {ID} @ {eW}nm: {X}")
+        # A = (X*3.1)*reddening
+        # print(f"Extinction in filter {ID}: {A}")
+        # shifted[:, ID] = filterValues + mu + A
+        # print(f"Shifted filter {ID} by {mu} + {A} = {mu+A}")
+        # print(f"Shifted filter {ID} by {mu+A} = {shifted[:, ID]}")
     return shifted
 
 def shift_isochrone(

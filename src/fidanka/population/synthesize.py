@@ -1,5 +1,8 @@
 from fidanka.isochrone.isochrone import shift_full_iso
 from fidanka.population.utils import sample_n_masses
+from fidanka.bolometric import BolometricCorrector
+from fidanka.misc.utils import closest, interpolate_arrays, get_samples
+from fidanka.isochrone.MIST import read_iso, read_iso_metadata
 
 
 import pickle as pkl
@@ -55,205 +58,6 @@ def mass_sample(
         sample[i] = sm
     return sample
 
-def inverse_cdf_sample(
-        f : Callable[[FARRAY_1D], FARRAY_1D],
-        x : FARRAY_1D = None
-        ) -> Callable[[FARRAY_1D], FARRAY_1D]:
-    """
-    Generate a function that samples from the inverse CDF of a given function.
-
-    Parameters
-    ----------
-        f : Callable[[FARRAY_1D], FARRAY_1D]
-            Function to sample from.
-        x : FARRAY_1D, default=None
-            Domain of the function. If None, defaults to np.linspace(0,1,100000).
-
-    Returns
-    -------
-        inverse_cdf : Callable[[FARRAY_1D], FARRAY_1D]
-            Function that samples from the inverse CDF of f. To evaluate the
-            function, pass an array of uniform random numbers between 0 and 1.
-
-    Examples
-    --------
-    Let's sample from the inverse CDF of a Gaussian distribution. First, we
-    define the Gaussian distribution.
-
-    >>> def gaussian(x, mu=0, sigma=1):
-    ...     return np.exp(-(x-mu)**2/(2*sigma**2))
-
-    Then, we generate the inverse CDF function.
-
-    >>> inverse_cdf = inverse_cdf_sample(gaussian)
-
-    Finally, we sample from the inverse CDF.
-
-    >>> inverse_cdf(np.random.random(10))
-    """
-    if x is None:
-        x = np.linspace(0,1,100000)
-
-    y = f(x)
-    cdf_y = np.cumsum(y)
-    cdf_y_norm = cdf_y/cdf_y.max()
-
-    inverse_cdf = interp1d(
-            cdf_y_norm,
-            x,
-            bounds_error=False,
-            fill_value='extrapolate'
-            )
-
-    return inverse_cdf
-
-def get_samples(
-        n : int,
-        f : Callable[[FARRAY_1D], FARRAY_1D],
-        domain : FARRAY_1D = None
-        ) -> FARRAY_1D:
-    """
-    Sample n values from a given function. The function does not have to be
-    a normalized PDF as the function will be normalized before sampling.
-
-    Parameters
-    ----------
-        n : int
-            Number of samples to draw.
-        f : Callable[[FARRAY_1D], FARRAY_1D]
-            Function to sample from.
-        domain : FARRAY_1D, default=None
-            Domain of the function. If None, defaults to np.linspace(0,1,100000).
-
-    Returns
-    -------
-        samples : NDArray[float]
-            Array of samples.
-
-    Examples
-    --------
-    Let's sample 10 values from a quadratic function over the domain 0,2.
-
-    >>> def quadratic(x):
-    ...     return x**2
-
-    >>> get_samples(10, quadratic, domain=np.linspace(0,2,1000))
-    """
-
-    uniformSamples = np.random.random(n)
-    shiftedSamples = inverse_cdf_sample(f, x=domain)(uniformSamples)
-    return shiftedSamples
-
-def closest(
-        array : FARRAY_1D,
-        target : float
-        ) -> Tuple[Union[FARRAY_1D, None], Union[FARRAY_1D, None]]:
-    """
-    Find the closest values above and below a given target in an array.
-    If the target is in the array, the function returns the exact target value
-    in both elements of the tuple. If the target is not exactly in the array,
-    the function returns the closest value below the target in the first
-    element of the tuple and the closest value above the target in the second
-    element of the tuple. If the taret is below the minimum value in the array,
-    the first element of the tuple is None. If the target is above the maximum
-    value in the array, the second element of the tuple is None.
-
-    Parameters
-    ----------
-        array : NDArray[float]
-            Array to search.
-        target : float
-            Target value.
-
-    Returns
-    -------
-        closest_lower : Union[NDArray[float], None]
-            Closest value below the target. If the target is below the minimum
-            value in the array, returns None.
-        closest_upper : Union[NDArray[float], None]
-            Closest value above the target. If the target is above the maximum
-            value in the array, returns None.
-
-    Examples
-    --------
-    Let's find the closest values above and below 5 in an array.
-
-    >>> array = np.array([1,2,3,4,5,6,7,8,9,10])
-    >>> closest(array, 5)
-    (5, 6)
-    """
-    exact_value = array[array == target]
-
-    if exact_value.size > 0:
-        return exact_value[0], exact_value[0]
-
-    younger_ages = array[array < target]
-    older_ages = array[array > target]
-
-    if younger_ages.size == 0:
-        closest_lower = None
-    else:
-        closest_lower = younger_ages[np.argmin(np.abs(younger_ages - target))]
-
-    if older_ages.size == 0:
-        closest_upper = None
-    else:
-        closest_upper = older_ages[np.argmin(np.abs(older_ages - target))]
-
-    return closest_lower, closest_upper
-
-def interpolate_arrays(
-        array_lower : npt.NDArray,
-        array_upper : npt.NDArray,
-        target : float,
-        lower : float,
-        upper : float
-        ) -> npt.NDArray:
-    """
-    Interpolate between two arrays. The arrays must have the same shape.
-
-    Parameters
-    ----------
-        array_lower : NDArray[float]
-            Lower bounding array.
-        array_upper : NDArray[float]
-            Upper bounding array.
-        target : float
-            Target value to interpolate to.
-        lower : float
-            value at lower bounding array
-        upper : float
-            value at upper bounding array
-
-    Returns
-    -------
-        interpolated_array : NDArray[float]
-            Interpolated array at target value.
-
-    Examples
-    --------
-    Let's interpolate between two arrays.
-
-    >>> array_lower = np.array([1,2,3,4,5,6,7,8,9,10])
-    >>> array_upper = np.array([11,12,13,14,15,16,17,18,19,20])
-
-    >>> interpolate_arrays(array_lower, array_upper, 5.5, 5, 6)
-    """
-    array_lower = np.array(array_lower)
-    array_upper = np.array(array_upper)
-
-    # Ensure both arrays have the same shape
-    assert array_lower.shape == array_upper.shape, "Arrays must have the same shape"
-
-    # Calculate the interpolation weights
-    lower_weight = (upper - target) / (upper - lower)
-    upper_weight = (target - lower) / (upper - lower)
-
-    # Perform element-wise interpolation
-    interpolated_array = (array_lower * lower_weight) + (array_upper * upper_weight)
-
-    return interpolated_array
-
 def interpolate_eep_arrays(arr1, arr2, target, lower, upper):
     # Ensure arrays are numpy arrays
     arr1 = np.array(arr1)
@@ -303,30 +107,53 @@ class population:
                  maxMass,
                  artStarFuncs,
                  distance,
-                 reddening,
+                 colorExcess,
                  magName,
-                 responseFunctions):
+                 bolometricCorrectionTables,
+                 Rv = 3.1,
+                 ):
+
+        self.Av = Rv*colorExcess
+        self.Rv = Rv
+        self.mu = 5*np.log10(distance) - 5
+
         if isinstance(iso, str):
-            with open(iso, 'rb') as f:
-                iso = pkl.load(f)
-            isoNP = dict()
-            for age, df in iso.items():
-                isoNP[age] = df.values
-            self.iso = [iso]
-            self.isoNP = [isoNP]
+            self.iso = [read_iso(iso)]
+            self.isoMeta = [read_iso_metadata(iso)]
+            # isoNP = dict()
+            # for age, df in iso.items():
+            #     isoNP[age] = df.values
+            # self.isoNP = [isoNP]
         elif isinstance(iso, list):
-            isos = list()
-            isoNPs = list()
-            for isoFile in iso:
-                with open(isoFile, 'rb') as f:
-                    isoi = pkl.load(f)
-                    isos.append(isoi)
-                isoNP = dict()
-                for age, df in isoi.items():
-                    isoNP[age] = df.values
-                    isoNPs.append(isoNP)
-            self.iso = isos
-            self.isoNP = isoNPs
+            self.iso = [read_iso(isoFile) for isoFile in iso]
+            self.isoMeta = [read_iso_metadata(isoFile) for isoFile in iso]
+            # isoNPs = list()
+            # for isoFile in iso:
+                # isoNP = dict()
+                # for age, df in isoi.items():
+                    # isoNP[age] = df.values
+                    # isoNPs.append(isoNP)
+            # self.isoNP = isoNPs
+
+        self._bolometricCorrectors = list()
+        for iso, meta in zip(self.iso, self.isoMeta):
+            FeH = meta['[Fe/H]']
+            bc = BolometricCorrector(bolometricCorrectionTables, FeH)
+            self._bolometricCorrectors.append(bc)
+
+        for isoID, (iso, bc) in enumerate(zip(self.iso, self._bolometricCorrectors)):
+            for age, df in iso.items():
+                print(f'Calculating bolometric corrections for {age} Gyr isochrone...')
+                mags = bc.apparent_mags(
+                        10**df['log_Teff'],
+                        df['log_g'],
+                        df['log_L'],
+                        Av=self.Av,
+                        Rv=self.Rv,
+                        mu=self.mu
+                        )
+                bolCorrectedIso = pd.concat([df, mags], axis=1)
+                self.iso[isoID][age] = bolCorrectedIso
 
         self.alpha = alpha
         self.bf = bf
@@ -364,7 +191,6 @@ class population:
         self._completnessCheckColName = self._goodColumnNames[self._completnessCheckColumnID]
         self._isoFilterCompletenessCheckColName = f"ACS_WFC_{self._completnessCheckColName}_MAG"
         self._mappingFunctions = self._generate_mapping_functions()
-        self._responseFunctions = responseFunctions
 
     def _generate_mapping_functions(self):
         mappingFunctions = list()
@@ -374,7 +200,6 @@ class population:
             sortedMasses = list()
             maxSize = 0
             for age in validAges:
-                # validMasses = validMasses.union(set(iso[age]['initial_mass'].values))
                 sortedMasses.append(np.sort(iso[age]['initial_mass'].values))
                 maxSize = max(maxSize, len(sortedMasses[-1]))
 
@@ -393,13 +218,6 @@ class population:
                         apparentMags[ageID, massID] = extracted[0]
                 print('\r', end='')
             print('')
-
-            # with open(f"apparentMagTest_{isoID}.pkl", 'wb') as f:
-            #     pkl.dump({
-            #         'ages': sortedAges,
-            #         'masses': sortedMasses,
-            #         'apparentMags': apparentMags
-            #     }, f)
 
             num_pairs = sum([len(mass_list) for mass_list in sortedMasses])
 
@@ -432,8 +250,9 @@ class population:
         olderIso = self.isoNP[popI][older]
         isoAtAge = interpolate_eep_arrays(youngerIso, olderIso, age, younger, older)
 
-        isoShiftedToDistRed = shift_full_iso(isoAtAge[:, self._goodFilterIdx], self.distance, self.reddening, self._effectiveWavelengths,
-                                             self._goodColumnNames, self._responseFunctions)
+        # TODO Use the BolometricCorrector to get the bolometric correction
+        # isoShiftedToDistRed = shift_full_iso(isoAtAge[:, self._goodFilterIdx], self.distance, self.reddening, self._effectiveWavelengths,
+        #                                      self._goodColumnNames, self._responseFunctions)
 
         massMap = isoAtAge[:,2]
         sortedMasses = np.sort(massMap)
