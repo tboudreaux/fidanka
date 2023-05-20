@@ -39,6 +39,7 @@ def ridge_bounding(
         a1 : FARRAY_1D,
         a2 : FARRAY_1D,
         binsLeft : FARRAY_1D,
+        binsRight : FARRAY_1D,
         histBins : Union[int, str]=50,
         allowMax : bool=False,
         ) -> FARRAY_2D_4C:
@@ -60,8 +61,9 @@ def ridge_bounding(
         a2 : ndarray[float64]
             Axis 2, y coordinates of each data point
         binsLeft : ndarray[float64]
-            left (bottom) edges of bins along a2 axis. Bin size will be
-            calculated from binsLeft[1]-binsLeft[0]
+            left (bottom) edges of bins along a2 axis.
+        binsRight : ndarray[float64]
+            Right (bottom) edges of bins along a2 axis.
         histBins : Union[int,str], default=50
             Number of bins to use when generating the histogram. See numpy
             histogram documentation for valid stings to use.
@@ -96,8 +98,8 @@ def ridge_bounding(
     shape_dimension_check(a1, a2)
 
     gaus = lambda x, a, b, c: a*np.exp(-(x-b)**2/(2*c**2))
-    binSize = binsLeft[1] - binsLeft[0]
-    binsRight = binsLeft + binSize
+#    binSize = binsLeft[1] - binsLeft[0]
+#    binsRight = binsLeft + binSize
     ridgeLine = np.zeros(shape=(4,binsLeft.shape[0]))
     for binID, (left, right) in enumerate(zip(binsLeft, binsRight)):
         cut = (a2 >= left) & (a2 < right)
@@ -118,15 +120,30 @@ def ridge_bounding(
             ridgeLine[2,binID] = np.percentile(Xss,4)
             ridgeLine[3,binID] = np.percentile(Xss,96)
         except RuntimeError:
-            lenOkay = cut[cut == True].shape[0]
-            print(f"Unable to fit for bin {binID} from {left}->{right} with {lenOkay} targets")
-            if len(histV) > 1 and allowMax:
-                print("Falling back to max value")
-                ridgeLine[:, binID] = histC[np.argmax(histV)]
-            elif len(histV) > 1 and not allowMax:
-                print("Falling back to nan")
-                ridgeLine[:, binID] = np.nan
-    return ridgeLine[:, 1:-1]
+            # lenOkay = cut[cut == True].shape[0]
+            # print(f"Unable to fit for bin {binID} from {left}->{right} with {lenOkay} targets")
+            # if len(histV) > 1 and allowMax:
+            #     print("Falling back to max value")
+            #     ridgeLine[:, binID] = histC[np.argmax(histV)]
+            # elif len(histV) > 1 and not allowMax:
+            #     print("Falling back to nan")
+            #     ridgeLine[:, binID] = np.nan
+            ridgeLine[0,binID] = np.median(cut)
+            ridgeLine[1,binID] = (left+right)/2
+            ridgeLine[2,binID] = np.percentile(Xss,4)
+            ridgeLine[3,binID] = np.percentile(Xss,96)
+        # fit = curve_fit(
+        #                 gaus,
+        #                 histC,
+        #                 histV,
+        #                 p0=[max(histV),histC[histV.argmax()],0.01]
+        #                 )
+        # ridgeLine[0,binID] = fit[0][1]
+        # ridgeLine[1,binID] = (left+right)/2
+        # ridgeLine[2,binID] = np.percentile(Xss,4)
+        # ridgeLine[3,binID] = np.percentile(Xss,96)
+    # return ridgeLine[:, 1:-1]
+    return ridgeLine[:, :]
 
 def instantaious_hull_density_cpp(
         r0: R2_VECTOR,
@@ -469,6 +486,8 @@ def renormalize(
         filter2 : Union[FARRAY_1D, pd.Series],
         error1 : Union[FARRAY_1D, pd.Series],
         error2 : Union[FARRAY_1D, pd.Series],
+        # binsLeft : Union[FARRAY_1D, bool] = False,
+        # binsRight : Union[FARRAY_1D, bool] = False,
         ) -> Tuple[FARRAY_1D, FARRAY_1D, FARRAY_1D, FARRAY_1D]:
     """
     Resample the data in the first place to ensure new data has roughly uniform
@@ -499,7 +518,8 @@ def renormalize(
         error2_renomalized : Union[ndarray[float64], pd.Series]
             One sigma uncertainties in Photometry from renomalized filter2.
     """
-
+    # Bin_count = [len(filter1[(filter1 >= binsLeft[i]) & (filter1 < binsRight[i])]) for i in range(len(binsLeft))]
+    # Bin_count_wanted = max(Bin_count)
     len_data = len(filter1)
     filter1 = np.array(filter1).reshape(1,len_data)
     filter2 = np.array(filter2).reshape(1,len_data)
@@ -508,7 +528,8 @@ def renormalize(
     df = np.concatenate((filter1,error1,filter2,error2)).T
     df = df[df[:,0].argsort()].T
 
-    neighbor_n = 50
+    # if binsLeft == False:
+    neighbor_n = 30
     diff = df[0,:-neighbor_n] - df[0,neighbor_n:]
     diff = np.concatenate((np.array([diff[0]]*int(neighbor_n/2)),diff,np.array([diff[-1]]*int(neighbor_n/2))))
     max_diff = max(diff)
@@ -519,13 +540,15 @@ def renormalize(
         diff = np.concatenate((np.array([diff[0]]*int(neighbor_n/2)),diff,np.array([diff[-1]]*int(neighbor_n/2))))
         max_diff = max(diff)
 
-    repeat_time = [int(np.ceil(diff[i]/(5*max_diff))) for i in range(len(df[0]))]
+    repeat_time = [int(np.ceil(diff[i]/(max_diff))) for i in range(len(df[0]))]
     repeat_idx = np.concatenate(tuple([np.array([i]*repeat_time[i]) for i in range(len(repeat_time))])).flatten()
     df = df[:,repeat_idx]
     filter1_renomalized = df[0]
     error1_renomalized = df[1]
     filter2_renomalized = df[2]
     error2_renomalized = df[3]
+    # else:
+    #     repeat_time = []
 
 
     return filter1_renomalized, error1_renomalized, filter2_renomalized, error2_renomalized
@@ -595,11 +618,12 @@ def mag_bins(
         mag : Union[FARRAY_1D, pd.Series],
         percHigh : float,
         percLow : float,
-        binSize : float
+        binSize : Union[str, float],
         ) -> Tuple[FARRAY_1D, FARRAY_1D]:
     """
     Find the left and right edges of bins in magnitude space between magnitudes
-    percLow and percHigh percentiles with a bin size of binSize.
+    percLow and percHigh percentiles with a bin size of binSize. Find suitable
+    binsize if choose to use adapative bin size
 
     Parameters
     ----------
@@ -609,7 +633,7 @@ def mag_bins(
             Lower bound percentile to base range on
         percHigh : float
             Upper bound percentile to base range on
-        binSize : float
+        binSize : Union[str, float]
             Spacing between each left bin edge to each right bin edge
 
     Returns
@@ -620,8 +644,27 @@ def mag_bins(
             right edges of bins in magnitude space
     """
     magRange = percentile_range(mag, percLow, percHigh)
-    binsLeft = np.arange(magRange[1], magRange[0], binSize)
-    binsRight = binsLeft + binSize
+    if binSize == 'adaptive':
+        len_mag = len(mag)
+        # bin_width = 0.1
+        # binsLeft = np.arange(magRange[1], magRange[0], 0.1)
+        # binsRight = binsLeft + 0.01
+        # Bin_count = [len(mag[(mag >= binsLeft[i]) & (mag < binsRight[i])]) for i in range(len(binsLeft))]
+        # Bin_min = min(Bin_count)
+        # Bin_count_wanted = max(Bin_count)
+        Bin_count_wanted = 30
+
+        while (len_mag % Bin_count_wanted) < (0.8*Bin_count_wanted):
+            Bin_count_wanted += 1
+        Num_bin = int(np.ceil(len_mag/Bin_count_wanted))
+        mag_sort = np.sort(mag)
+        binsLeft = np.array([mag_sort[i*Bin_count_wanted] for i in range(Num_bin)])
+        binsRight = np.append(binsLeft[1:], mag_sort[-1]+0.001)
+        with np.printoptions(threshold=np.inf):
+            print(binsLeft,binsRight)
+    else:
+        binsLeft = np.arange(magRange[1], magRange[0], binSize)
+        binsRight = binsLeft + binSize
     return binsLeft, binsRight
 
 def density_color_cut(
@@ -902,9 +945,9 @@ def spline_based_density_peak_extraction(
 def approximate_fiducial_line_function(
         color : FARRAY_1D,
         mag : FARRAY_1D,
+        binSize : Union[str, float],
         percLow : float = 1,
         percHigh : float = 99,
-        binSize : float = 0.1,
         allowMax : bool = False,
         ) -> Callable:
     """
@@ -937,17 +980,17 @@ def approximate_fiducial_line_function(
             of magnitude (so as to make it a one-to-one function)
 
     """
-    binsLeft, _ = mag_bins(mag, percLow, percHigh, binSize)
-    fiducialLine = ridge_bounding(color, mag, binsLeft, allowMax=allowMax)
+    binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize)
+    fiducialLine = ridge_bounding(color, mag, binsLeft, binsRight, allowMax=allowMax)
     ff = interp1d(fiducialLine[1], fiducialLine[0], bounds_error=False, fill_value='extrapolate')
     return ff
 
 def verticalize_CMD(
         color : FARRAY_1D,
         mag : FARRAY_1D,
+        binSize : Union[str, float],
         percLow : float = 1,
         percHigh : float = 99,
-        binSize : float = 0.1,
         allowMax : bool = False,
         ) -> Tuple[FARRAY_1D, Callable]:
     """
@@ -982,7 +1025,7 @@ def verticalize_CMD(
             of magnitude (so as to make it a one-to-one function)
 
     """
-    ff = approximate_fiducial_line_function(color, mag, percLow=percLow, percHigh=percHigh, binSize=binSize, allowMax=allowMax)
+    ff = approximate_fiducial_line_function(color, mag, binSize, percLow=percLow, percHigh=percHigh, allowMax=allowMax)
     vColor = color - ff(mag)
     return vColor, ff
 
@@ -999,7 +1042,7 @@ def fiducial_line(
         reverseFilterOrder : bool = False,
         mcruns : int = 10,
         convexHullPoints : int = 100,
-        binSize : float = 0.1,
+        binSize : Union[str, float] = 'adaptive',
         percLow : float = 1,
         percHigh : float = 99,
         appxBinSize : float = 0.1,
@@ -1040,8 +1083,9 @@ def fiducial_line(
         convexHullPoints : int, default=100
             Number of closest points to considered when finding the convex hull
             used to define the area in the instantaious_hull_density function.
-        binSize : int, default=0.1
-            Bin size to use when applying the spline smoothing algorithm
+        binSize : Union[str, float], default=adaptive
+            Bin size to use when applying the spline smoothing algorithm. The 
+            default is adaptive. It can also be set as fixed values.
         percLow : float, default=1
             Overall lower percentile bound to cut magnitude on.
         percHigh : float, default=99
@@ -1112,27 +1156,32 @@ def fiducial_line(
         logger.setLevel(logging.WARNING)
         handler.setLevel(logging.WARNING)
 
-    if uni_density == True:
-        len_prev = len(filter1)
-        filter1, error1, filter2, error2 = renormalize(filter1,filter2,error1,error2)
-        len_renom = len(filter1)
-        mcruns = int(np.ceil(mcruns*(len_prev/len_renom)))
-
     warnings.showwarning = warning_traceback
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
-
+    binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize)
+    if (uni_density == True) & (binSize == 'adaptive'):
+        filter1_renom, error1_renom, filter2_renom, error2_renom = renormalize(filter1,filter2,error1,error2,binsLeft = binsLeft,binsRight = binsRight)
+        baseSampling = np.zeros(filter1_renom.shape[0])
+        f1s = shift_photometry_by_error(filter1_renom, error1_renom, baseSampling)
+        f2s = shift_photometry_by_error(filter2_renom, error2_renom, baseSampling)
+        color_renorm, mag_renorm = color_mag_from_filters(f1s, f2s, reverseFilterOrder)
+        _, ff = verticalize_CMD(color_renorm, mag_renorm, binSize, percLow = percLow, percHigh = percHigh, allowMax=allowMax)
+        color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
+        vColor = ff(mag)
+    else:
+        color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
+        vColor, ff = verticalize_CMD(color, mag, binSize, percLow = percLow, percHigh = percHigh, allowMax=allowMax)
+    
+    # color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
     binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize)
 
-    # import matplotlib.pyplot as plt
-    # fig, axs = plt.subplots(1,2)
-    #
-    vColor, ff = verticalize_CMD(color, mag, percLow, percHigh, appxBinSize, allowMax=allowMax)
-    # axs[0].scatter(vColor, mag, s=1)
-    #
-    # axs[1].scatter(color, mag, s=1)
-    # axs[0].invert_yaxis()
-    # axs[1].invert_yaxis()
-    # plt.show()
+    import matplotlib.pyplot as plt
+    fig, axs = plt.subplots(1,2)
+    axs[0].scatter(vColor, mag, s=1)
+    axs[1].scatter(color, mag, s=1)
+    axs[0].invert_yaxis()
+    axs[1].invert_yaxis()
+    plt.show()
 
     if cacheDensity and os.path.exists(cacheDensityName):
         logger.info("Using cached density...")
