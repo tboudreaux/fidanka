@@ -703,7 +703,7 @@ def density_color_cut(
             Magnitude value of the right bin edge. The right edge is non
             inclusive
         smooth : bool, default=True
-            Flah to control whether a savgol_filter of order 2 and window size
+            Flag to control whether a savgol_filter of order 2 and window size
             50 is applied to the density data after it is sorted by ascending
             color.
 
@@ -1044,6 +1044,45 @@ def perp_distance(p0, p1, theta):
     b = np.sin(theta)*(p1[0]-p0[0])
     return np.abs(a-b)
 
+def log_prior(theta, binsLeft, binsRight,colorLeft,colorRight):
+    cbin = theta[:int(len(theta)/2)]
+    m = theta[int(len(theta)/2):]
+    conditions = [((cbin[i] > colorLeft[i]) & (cbin[i] < colorRight[i]) & (m[i] > binsLeft[i]) & (m[i] < binsRight[i])) for i in range(len(m))]
+    for condition in conditions:
+        if not condition:
+            return -np.inf
+    return 0.0
+
+def log_likelihood(theta, binned_mag, binned_color, binned_color_err):
+    cbin = theta[:int(len(theta)/2)]
+    m = theta[int(len(theta)/2):]
+    ff = interp1d(m, cbin, bounds_error=False, fill_value='extrapolate')
+    Num_bin = len(cbin)
+    log_like = 0
+    for i in range(Num_bin):
+        if i == 0:
+            model = ff(binned_mag[i])
+            log_like += -0.5 * np.sum((binned_color[i] - model) ** 2 / binned_color_err[i]**2 + np.log(2*np.pi*binned_color_err[i]**2))
+        elif i == Num_bin -1:
+            model = ff(binned_mag[i])
+            log_like += -0.5 * np.sum((binned_color[i] - model) ** 2 / binned_color_err[i]**2 + np.log(2*np.pi*binned_color_err[i]**2))
+        else:
+            first_half_mask = binned_mag[i] <= m[i]
+            second_half_mask = binned_mag[i] > m[i]
+            model = ff(binned_mag[i][first_half_mask])
+            log_like += -0.5 * np.sum((binned_color[i][first_half_mask] - model) ** 2 / binned_color_err[i][first_half_mask]**2 + np.log(2*np.pi*binned_color_err[i][first_half_mask]**2))
+            model = ff(binned_mag[i][second_half_mask])
+            log_like += -0.5 * np.sum((binned_color[i][second_half_mask] - model) ** 2 / binned_color_err[i][second_half_mask]**2 + np.log(2*np.pi*binned_color_err[i][second_half_mask]**2))
+    return log_like    
+
+def log_probability(theta, binned_color, binned_mag, binned_color_err, binsLeft, binsRight,colorLeft,colorRight, Equal_bins = False):
+    lp = log_prior(theta, binsLeft, binsRight,colorLeft,colorRight)
+    if not np.isfinite(lp):
+        return -np.inf
+    return lp + log_likelihood(theta, binned_color, binned_mag, binned_color_err)
+
+
+
 def fiducial_line(
         filter1 : Union[FARRAY_1D, pd.Series],
         filter2 : Union[FARRAY_1D, pd.Series],
@@ -1067,6 +1106,7 @@ def fiducial_line(
         minMagCut : float = -np.inf,
         uni_density: bool = False,
         binSize_min: float = 0.1,
+        piecewise_linear: bool = False,
         ) -> FARRAY_2D_2C:
     """
 
@@ -1148,6 +1188,10 @@ def fiducial_line(
             Control the maximum number of magnitude bins
         binSize_min: float, default = 0.1
             The minimum size of mag bin. Set to 0.1 to avoid overfitting Main sequence
+        piecewise_linear: bool, default = False
+            Introduce a new method of calulating the fiduial line using mcmc to find the 
+            best-fit piecewise linear function for the data. Can be turned on when Hull
+            density method struggles in the low density region
 
     Returns
     -------
@@ -1206,39 +1250,40 @@ def fiducial_line(
     axs[1].invert_yaxis()
     plt.show()
 
-    if cacheDensity and os.path.exists(cacheDensityName):
-        logger.info("Using cached density...")
-        loaded = np.load(cacheDensityName)
-        density = loaded["density"]
-        mcrunsLoaded = loaded["mcruns"]
-        if mcrunsLoaded != mcruns:
-            logger.debug(f"mcrunsLoaded: {mcrunsLoaded}")
-            raise ValueError(f"mcruns does not match cached value! ({mcruns} != {mcrunsLoaded})")
-    else:
-        density = MC_convex_hull_density_approximation(
-                filter1,
-                filter2,
-                error1,
-                error2,
-                reverseFilterOrder,
-                convexHullPoints=convexHullPoints,
-                mcruns=mcruns,
-                pbar=pbar,
-                )
-
-        if cacheDensity:
-            with open(cacheDensityName, 'wb') as f:
-                np.savez(f , density=density, mcruns=mcruns)
-
-    fiducial=np.zeros(shape=(binsLeft.shape[0],5))
-    logger.info("Fitting fiducial line to density...")
-    for binID, (left, right) in tqdm(enumerate(zip(binsLeft, binsRight)), disable=verbose, desc="Fitting fiducial line to density", total=len(binsLeft)):
-        logger.info(f"Working on bin {binID}")
-        logger.info(f"\tDensity...")
-        logger.info(f"\tSpline based density peak extraction...")
-        if (right - left) > (binSize_min + 0.01):
-            cHighest, m, c5, c95 = ridge_bounding(vColor, mag, np.array(left).reshape(1,1), np.array(right).reshape(1,1), histBins=10,allowMax=allowMax)
+    if piecewise_linear == False:
+        if cacheDensity and os.path.exists(cacheDensityName):
+            logger.info("Using cached density...")
+            loaded = np.load(cacheDensityName)
+            density = loaded["density"]
+            mcrunsLoaded = loaded["mcruns"]
+            if mcrunsLoaded != mcruns:
+                logger.debug(f"mcrunsLoaded: {mcrunsLoaded}")
+                raise ValueError(f"mcruns does not match cached value! ({mcruns} != {mcrunsLoaded})")
         else:
+            density = MC_convex_hull_density_approximation(
+                    filter1,
+                    filter2,
+                    error1,
+                    error2,
+                    reverseFilterOrder,
+                    convexHullPoints=convexHullPoints,
+                    mcruns=mcruns,
+                    pbar=pbar,
+                    )
+
+            if cacheDensity:
+                with open(cacheDensityName, 'wb') as f:
+                    np.savez(f , density=density, mcruns=mcruns)
+
+        fiducial=np.zeros(shape=(binsLeft.shape[0],5))
+        logger.info("Fitting fiducial line to density...")
+        for binID, (left, right) in tqdm(enumerate(zip(binsLeft, binsRight)), disable=verbose, desc="Fitting fiducial line to density", total=len(binsLeft)):
+            logger.info(f"Working on bin {binID}")
+            logger.info(f"\tDensity...")
+            logger.info(f"\tSpline based density peak extraction...")
+            # if (right - left) > (binSize_min*3):
+            #     cHighest, m, c5, c95 = ridge_bounding(vColor, mag, np.array(left).reshape(1,1), np.array(right).reshape(1,1), allowMax=allowMax)
+            # else:
             dC, cC = density_color_cut(density, vColor, mag, left, right)
             cHighest, c5, c95 = spline_based_density_peak_extraction(
                     cC,
@@ -1250,24 +1295,58 @@ def fiducial_line(
                     )
             logger.info(f"\tFiducial point found at {cHighest}")
             m = (left + right)/2
-        fiducial[binID,0] = cHighest
-        fiducial[binID,1] = m
-        fiducial[binID,2] = c5
-        fiducial[binID,3] = c95
-    logger.info("Completed fitting fiducial line to density!")
+            # 
+            fiducial[binID,0] = cHighest
+            fiducial[binID,1] = m
+            fiducial[binID,2] = c5
+            fiducial[binID,3] = c95
+        logger.info("Completed fitting fiducial line to density!")
 
-    fiducial[:,0] = fiducial[:,0] + ff(fiducial[:, 1])
-    fiducial[:,2] = fiducial[:,2] + ff(fiducial[:, 1])
-    fiducial[:,3] = fiducial[:,3] + ff(fiducial[:, 1])
+        fiducial[:,0] = fiducial[:,0] + ff(fiducial[:, 1])
+        fiducial[:,2] = fiducial[:,2] + ff(fiducial[:, 1])
+        fiducial[:,3] = fiducial[:,3] + ff(fiducial[:, 1])
 
-    slope = np.gradient(fiducial[:,3], fiducial[:,1])
-    theta = np.arctan(slope)
-    fiducial[:,4] = perp_distance(fiducial[:,2], fiducial[:,3], theta)
+        slope = np.gradient(fiducial[:,3], fiducial[:,1])
+        theta = np.arctan(slope)
+        fiducial[:,4] = perp_distance(fiducial[:,2], fiducial[:,3], theta)
 
-    # remove all rows of fiducial which contain a nan value
-    logger.info("Removing nan values from fiducial line...")
-    fiducial = fiducial[~np.isnan(fiducial).any(axis=1)]
+        # remove all rows of fiducial which contain a nan value
+        logger.info("Removing nan values from fiducial line...")
+        fiducial = fiducial[~np.isnan(fiducial).any(axis=1)]
 
-    # fiducial = fiducial[fiducial[:,1] > minMagCut]
+        # fiducial = fiducial[fiducial[:,1] > minMagCut]
+    else:
+        import emcee
+        from multiprocessing import Pool
+        masks = [((mag >= binsLeft[i]) & (mag < binsRight[i])) for i in range(len(binsLeft))]
+        binned_mag = [mag[mask] for mask in masks]
+        binned_color = [color[mask] for mask in masks]
+        colorLeft = [min(binned_color[i]) for i in range(len(binned_color))]
+        colorRight = [max(binned_color[i]) for i in range(len(binned_color))]
+        color_error = np.sqrt(error1**2 + error2**2)
+        binned_color_error = [color_error[mask] for mask in masks]
+        cbin, m, _, _ = ridge_bounding(color, mag, binsLeft, binsRight, allowMax=allowMax)
+        nwalkers = 500
+        theta = np.concatenate((cbin,m))
+        #theta = np.reshape(theta,(1,len(theta)))
+        theta = np.tile(theta,(nwalkers,1))
+        stds = np.concatenate((np.array([np.std(binned_color[i]) for i in range(len(cbin))]),np.array([np.std(binned_mag[i]) for i in range(len(cbin))])))
+        for i in range(nwalkers):
+            theta[i] += np.random.normal(0, stds, len(cbin)*2)
+        nwalkers, ndim = theta.shape
+        #print(theta, theta.shape, binned_mag.shape,binned_color.shape,binned_color_error.shape)
+        with Pool() as pool:
+            sampler = emcee.EnsembleSampler(
+                nwalkers, ndim, log_probability, args=(binned_mag, binned_color, binned_color_error,binsLeft, binsRight, colorLeft, colorRight), pool=pool
+                # ,moves=[
+                # (emcee.moves.DEMove(), 0.8),
+                # (emcee.moves.DESnookerMove(), 0.2),
+                # ]
+            )
+            sampler.run_mcmc(theta, 5000, progress=True, skip_initial_state_check = True)
+            
+        #tau = sampler.get_autocorr_time()
+        #print(tau)
+        return sampler.get_chain(flat=True)
 
     return fiducial

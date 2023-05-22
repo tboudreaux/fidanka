@@ -25,7 +25,8 @@ dependencies = [
 	"scipy",
 	"tqdm",
 	"pandas",
-	"pybind11"
+	"pybind11",
+	"emcee"
 	]
 version = "0.5.2"
 
