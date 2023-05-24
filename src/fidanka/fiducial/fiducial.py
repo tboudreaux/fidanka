@@ -652,9 +652,9 @@ def mag_bins(
         # Bin_min = min(Bin_count)
         # Bin_count_wanted = max(Bin_count)
         if max_Num_bin == False:
-            Bin_count_wanted = 30
+            Bin_count_wanted = 50
         else:
-            Bin_count_wanted = np.max((int(np.ceil(len_mag // max_Num_bin)),30))
+            Bin_count_wanted = np.max((int(np.ceil(len_mag // max_Num_bin)),50))
 
         mag_sort = np.sort(mag)
         binsLeft = [mag_sort[0]]
@@ -1106,7 +1106,7 @@ def fiducial_line(
         minMagCut : float = -np.inf,
         uni_density: bool = False,
         binSize_min: float = 0.1,
-        piecewise_linear: bool = False,
+        piecewise_linear: Union[bool,FARRAY_1D] = False,
         ) -> FARRAY_2D_2C:
     """
 
@@ -1188,10 +1188,11 @@ def fiducial_line(
             Control the maximum number of magnitude bins
         binSize_min: float, default = 0.1
             The minimum size of mag bin. Set to 0.1 to avoid overfitting Main sequence
-        piecewise_linear: bool, default = False
+        piecewise_linear: Union[bool,FARRAY_1D], default = False
             Introduce a new method of calulating the fiduial line using mcmc to find the 
             best-fit piecewise linear function for the data. Can be turned on when Hull
-            density method struggles in the low density region
+            density method struggles in the low density region. Takes [nwalkers, iter] if
+            not set as False
 
     Returns
     -------
@@ -1250,7 +1251,47 @@ def fiducial_line(
     axs[1].invert_yaxis()
     plt.show()
 
-    if piecewise_linear == False:
+    fiducial=np.zeros(shape=(binsLeft.shape[0],5))
+    logger.info("Fitting fiducial line to density...")
+    if piecewise_linear != False:
+        import emcee
+        from multiprocessing import Pool
+        masks = [((mag >= binsLeft[i]) & (mag < binsRight[i])) for i in range(len(binsLeft))]
+        binned_mag = [mag[mask] for mask in masks]
+        binned_color = [color[mask] for mask in masks]
+        colorLeft = [min(binned_color[i]) for i in range(len(binned_color))]
+        colorRight = [max(binned_color[i]) for i in range(len(binned_color))]
+        color_error = np.sqrt(error1**2 + error2**2)
+        binned_color_error = [color_error[mask] for mask in masks]
+        cbin, m, _, _ = ridge_bounding(color, mag, binsLeft, binsRight, allowMax=allowMax)
+        nwalkers = piecewise_linear[0]
+        theta = np.concatenate((cbin,m))
+        theta = np.tile(theta,(nwalkers,1))
+        stds = np.concatenate((np.array([np.std(binned_color[i]) for i in range(len(cbin))]),np.array([np.std(binned_mag[i]) for i in range(len(cbin))])))
+        for i in range(nwalkers):
+            if i != 0:
+                theta[i] += np.random.normal(0, stds, len(cbin)*2)
+        nwalkers, ndim = theta.shape
+        print("Number of dimension = {}".format(ndim))
+        with Pool() as pool:
+            sampler = emcee.EnsembleSampler(
+                nwalkers, ndim, log_probability, args=(binned_mag, binned_color, binned_color_error,binsLeft, binsRight, colorLeft, colorRight), pool=pool
+            )
+            sampler.run_mcmc(theta, piecewise_linear[1], progress=True, skip_initial_state_check = True)
+        flat_samples = sampler.get_chain(flat=True)
+        log_probs = sampler.get_log_prob(flat=True)
+        print("Log_probability of initial guess is {}".format(log_probs[0]))
+        print("Log_probability of best match is {}".format(np.max(log_probs)))
+        best_fit_val = flat_samples[np.argmax(log_probs)]
+        for binID in range(len(binsLeft)):
+            c5, c95 = percentile_range(binned_color[i],5,95)
+            m = best_fit_val[i + len(cbin)]
+            cHighest = best_fit_val[i]
+            fiducial[binID,0] = cHighest 
+            fiducial[binID,1] = m
+            fiducial[binID,2] = c5
+            fiducial[binID,3] = c95
+    else:
         if cacheDensity and os.path.exists(cacheDensityName):
             logger.info("Using cached density...")
             loaded = np.load(cacheDensityName)
@@ -1270,13 +1311,6 @@ def fiducial_line(
                     mcruns=mcruns,
                     pbar=pbar,
                     )
-
-            if cacheDensity:
-                with open(cacheDensityName, 'wb') as f:
-                    np.savez(f , density=density, mcruns=mcruns)
-
-        fiducial=np.zeros(shape=(binsLeft.shape[0],5))
-        logger.info("Fitting fiducial line to density...")
         for binID, (left, right) in tqdm(enumerate(zip(binsLeft, binsRight)), disable=verbose, desc="Fitting fiducial line to density", total=len(binsLeft)):
             logger.info(f"Working on bin {binID}")
             logger.info(f"\tDensity...")
@@ -1300,53 +1334,21 @@ def fiducial_line(
             fiducial[binID,1] = m
             fiducial[binID,2] = c5
             fiducial[binID,3] = c95
+        fiducial = fiducial[fiducial[:, 1].argsort()]
         logger.info("Completed fitting fiducial line to density!")
 
         fiducial[:,0] = fiducial[:,0] + ff(fiducial[:, 1])
         fiducial[:,2] = fiducial[:,2] + ff(fiducial[:, 1])
         fiducial[:,3] = fiducial[:,3] + ff(fiducial[:, 1])
 
-        slope = np.gradient(fiducial[:,3], fiducial[:,1])
-        theta = np.arctan(slope)
-        fiducial[:,4] = perp_distance(fiducial[:,2], fiducial[:,3], theta)
+    slope = np.gradient(fiducial[:,3], fiducial[:,1])
+    theta = np.arctan(slope)
+    fiducial[:,4] = perp_distance(fiducial[:,2], fiducial[:,3], theta)
 
-        # remove all rows of fiducial which contain a nan value
-        logger.info("Removing nan values from fiducial line...")
-        fiducial = fiducial[~np.isnan(fiducial).any(axis=1)]
+    # remove all rows of fiducial which contain a nan value
+    logger.info("Removing nan values from fiducial line...")
+    fiducial = fiducial[~np.isnan(fiducial).any(axis=1)]
 
-        # fiducial = fiducial[fiducial[:,1] > minMagCut]
-    else:
-        import emcee
-        from multiprocessing import Pool
-        masks = [((mag >= binsLeft[i]) & (mag < binsRight[i])) for i in range(len(binsLeft))]
-        binned_mag = [mag[mask] for mask in masks]
-        binned_color = [color[mask] for mask in masks]
-        colorLeft = [min(binned_color[i]) for i in range(len(binned_color))]
-        colorRight = [max(binned_color[i]) for i in range(len(binned_color))]
-        color_error = np.sqrt(error1**2 + error2**2)
-        binned_color_error = [color_error[mask] for mask in masks]
-        cbin, m, _, _ = ridge_bounding(color, mag, binsLeft, binsRight, allowMax=allowMax)
-        nwalkers = 500
-        theta = np.concatenate((cbin,m))
-        #theta = np.reshape(theta,(1,len(theta)))
-        theta = np.tile(theta,(nwalkers,1))
-        stds = np.concatenate((np.array([np.std(binned_color[i]) for i in range(len(cbin))]),np.array([np.std(binned_mag[i]) for i in range(len(cbin))])))
-        for i in range(nwalkers):
-            theta[i] += np.random.normal(0, stds, len(cbin)*2)
-        nwalkers, ndim = theta.shape
-        #print(theta, theta.shape, binned_mag.shape,binned_color.shape,binned_color_error.shape)
-        with Pool() as pool:
-            sampler = emcee.EnsembleSampler(
-                nwalkers, ndim, log_probability, args=(binned_mag, binned_color, binned_color_error,binsLeft, binsRight, colorLeft, colorRight), pool=pool
-                # ,moves=[
-                # (emcee.moves.DEMove(), 0.8),
-                # (emcee.moves.DESnookerMove(), 0.2),
-                # ]
-            )
-            sampler.run_mcmc(theta, 5000, progress=True, skip_initial_state_check = True)
-            
-        #tau = sampler.get_autocorr_time()
-        #print(tau)
-        return sampler.get_chain(flat=True)
+    # fiducial = fiducial[fiducial[:,1] > minMagCut]
 
     return fiducial
