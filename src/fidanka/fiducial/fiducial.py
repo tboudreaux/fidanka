@@ -1326,9 +1326,17 @@ def fiducial_line(
     #     filter2 = shift_photometry_by_error(filter2, error2, baseSampling)
     #     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
     #     vColor = ff(mag) - color
-    
+
     import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(1,2,figsize=(10,5))
+    fig, axs = plt.subplots(1,3,figsize=(15,5))	
+    axs[2].scatter(vColor, mag, s=1)	
+    axs[2].invert_yaxis()
+    mask = [np.abs(vColor[i]) < 3*np.sqrt(error1[i]**2 + error2[i]**2) for i in range(len(filter1))]	
+    filter1, error1, filter2, error2 = filter1[mask], error1[mask], filter2[mask], error2[mask]	
+
+    color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)	
+    vColor = ff(mag) - color	
+    binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize, binSize_min=binSize_min)
     axs[0].scatter(vColor, mag, s=1)
     axs[1].scatter(color, mag, s=1)
     mag_ver = np.linspace(min(filter1),max(filter1),100)
