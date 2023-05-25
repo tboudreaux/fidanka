@@ -1044,7 +1044,36 @@ def perp_distance(p0, p1, theta):
     b = np.sin(theta)*(p1[0]-p0[0])
     return np.abs(a-b)
 
-def log_prior(theta, binsLeft, binsRight,colorLeft,colorRight):
+def log_prior(
+        theta: FARRAY_1D,
+        binsLeft : FARRAY_1D,
+        binsRight : FARRAY_1D,
+        colorLeft : FARRAY_1D,
+        colorRight : FARRAY_1D,
+        ) -> float:
+
+    """
+    provide an uninformative prior for mcmc
+
+    Parameters
+    ----------
+        theta: FARRAY_1D
+            Parameters corresponding to the color (first half) and magnitude (
+            second half) of each bin
+        binsLeft : ndarray[float64]
+            left edges of bins in magnitude space
+        binsRight : ndarray[float64]
+            right edges of bins in magnitude space
+        colorLeft : ndarray[float64]
+            left edges of bins in color space
+        colorRight : ndarray[float64]
+            right edges of bins in color space        
+
+    Returns
+    -------
+        prior:float
+            a uniform prior within the boundary
+    """
     cbin = theta[:int(len(theta)/2)]
     m = theta[int(len(theta)/2):]
     conditions = [((cbin[i] > colorLeft[i]) & (cbin[i] < colorRight[i]) & (m[i] > binsLeft[i]) & (m[i] < binsRight[i])) for i in range(len(m))]
@@ -1053,7 +1082,33 @@ def log_prior(theta, binsLeft, binsRight,colorLeft,colorRight):
             return -np.inf
     return 0.0
 
-def log_likelihood(theta, binned_mag, binned_color, binned_color_err):
+def log_likelihood(
+        theta : FARRAY_1D,
+        binned_mag : FARRAY_2D_2C, 
+        binned_color : FARRAY_2D_2C, 
+        binned_color_err : FARRAY_2D_2C, 
+        ) -> float:
+    """
+    Calculate the logrithmic likelihood for given parameters
+
+    Parameters
+    ----------
+        theta: FARRAY_1D
+            Parameters corresponding to the color (first half) and magnitude (
+            second half) of each bin
+        binned_mag : FARRAY_2D_2C, 
+            binned magnitude of all input data
+        binned_color
+            binned color of all input data
+        binned_color_err : FARRAY_2D_2C,
+            binned color of all input data
+
+    Returns
+    -------
+        log_like: float
+            logrithmic likelihood of given set of parameters
+    """
+        
     cbin = theta[:int(len(theta)/2)]
     m = theta[int(len(theta)/2):]
     ff = interp1d(m, cbin, bounds_error=False, fill_value='extrapolate')
@@ -1075,7 +1130,50 @@ def log_likelihood(theta, binned_mag, binned_color, binned_color_err):
             log_like += -0.5 * np.sum((binned_color[i][second_half_mask] - model) ** 2 / binned_color_err[i][second_half_mask]**2 + np.log(2*np.pi*binned_color_err[i][second_half_mask]**2))
     return log_like    
 
-def log_probability(theta, binned_color, binned_mag, binned_color_err, binsLeft, binsRight,colorLeft,colorRight, Equal_bins = False):
+def log_probability(
+        theta: FARRAY_1D,
+        binned_color : FARRAY_2D_2C, 
+        binned_mag : FARRAY_2D_2C, 
+        binned_color_err : FARRAY_2D_2C, 
+        binsLeft : FARRAY_1D,
+        binsRight : FARRAY_1D,
+        colorLeft : FARRAY_1D,
+        colorRight : FARRAY_1D,
+        ) -> float:
+    """
+    Calculate the logrithmic probabilty for the parameter. Note, compare to
+    the verticalized cmd method, this method also take into the consideration
+    of the relation between neighbor bins.
+    The main drawbacks of mcmc is that it is very ineffcient in recovering those
+    parameters when they are highly correlated and the curse of dimensionality 
+    also suggests that using mcmc in this case can be very computationally 
+    expensive.
+
+    Parameters
+    ----------
+        theta: FARRAY_1D, 
+            Parameters corresponding to the color (first half) and magnitude (
+            second half) of each bin
+        binned_mag : FARRAY_2D_2C, 
+            binned magnitude of all input data
+        binned_color
+            binned color of all input data
+        binned_color_err : FARRAY_2D_2C,
+            binned color of all input data
+        binsLeft : ndarray[float64]
+            left edges of bins in magnitude space
+        binsRight : ndarray[float64]
+            right edges of bins in magnitude space
+        colorLeft : ndarray[float64]
+            left edges of bins in color space
+        colorRight : ndarray[float64]
+            right edges of bins in color space        
+
+    Returns
+    -------
+        log_prop
+            logrithmic probability of given sets of parameters
+    """
     lp = log_prior(theta, binsLeft, binsRight,colorLeft,colorRight)
     if not np.isfinite(lp):
         return -np.inf
@@ -1220,32 +1318,21 @@ def fiducial_line(
     binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize, binSize_min = binSize_min)
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
     vColor, ff = verticalize_CMD(color, mag, binSize, percLow = percLow, percHigh = percHigh, allowMax=allowMax)
+
+    # if uni_density==True:
+    #     filter1, error1, filter2, error2 = renormalize(filter1,filter2,error1,error2)
+    #     baseSampling = np.zeros(filter1.shape[0])
+    #     filter1 = shift_photometry_by_error(filter1, error1, baseSampling)
+    #     filter2 = shift_photometry_by_error(filter2, error2, baseSampling)
+    #     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
+    #     vColor = ff(mag) - color
+    
     import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(1,3,figsize=(15,5))
-    axs[2].scatter(vColor, mag, s=1)
-    axs[2].invert_yaxis()
-
-    #binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize=0.1)
-    mag_ver = np.linspace(min(filter1),max(filter1),100)
-    color_ver = ff(mag_ver)
-
-    if uni_density==True:
-        filter1, error1, filter2, error2 = renormalize(filter1,filter2,error1,error2)
-        baseSampling = np.zeros(filter1.shape[0])
-        filter1 = shift_photometry_by_error(filter1, error1, baseSampling)
-        filter2 = shift_photometry_by_error(filter2, error2, baseSampling)
-        color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
-        vColor = ff(mag) - color
-
-    mask = [np.abs(vColor[i]) < 3*np.sqrt(error1[i]**2 + error2[i]**2) for i in range(len(filter1))]
-    filter1, error1, filter2, error2 = filter1[mask], error1[mask], filter2[mask], error2[mask]
-
-    color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
-    vColor = ff(mag) - color
-    binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize, binSize_min=binSize_min)
-
+    fig, axs = plt.subplots(1,2,figsize=(10,5))
     axs[0].scatter(vColor, mag, s=1)
     axs[1].scatter(color, mag, s=1)
+    mag_ver = np.linspace(min(filter1),max(filter1),100)
+    color_ver = ff(mag_ver)
     axs[1].plot(color_ver,mag_ver,c='r')
     axs[0].invert_yaxis()
     axs[1].invert_yaxis()
@@ -1284,9 +1371,9 @@ def fiducial_line(
         print("Log_probability of best match is {}".format(np.max(log_probs)))
         best_fit_val = flat_samples[np.argmax(log_probs)]
         for binID in range(len(binsLeft)):
-            c5, c95 = percentile_range(binned_color[i],5,95)
-            m = best_fit_val[i + len(cbin)]
-            cHighest = best_fit_val[i]
+            c5, c95 = percentile_range(binned_color[binID],5,95)
+            m = best_fit_val[binID + len(cbin)]
+            cHighest = best_fit_val[binID]
             fiducial[binID,0] = cHighest 
             fiducial[binID,1] = m
             fiducial[binID,2] = c5
