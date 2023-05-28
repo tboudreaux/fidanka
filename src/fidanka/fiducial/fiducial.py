@@ -7,7 +7,7 @@ import pandas as pd
 import os
 
 import numpy.typing as npt
-from typing import Union, Tuple, Callable
+from typing import Union, Tuple, Callable, List
 
 from scipy.optimize import curve_fit, fsolve, newton, brentq, ridder
 from scipy.spatial import ConvexHull
@@ -861,6 +861,56 @@ def percentage_within_n_standard_deviations(n):
     percentage = (2 * cdf_n - 1) * 100
     return percentage
 
+def waveform_collapse_peak_extraction(
+        colorBins : List[FARRAY_1D],
+        densityBins : List[FARRAY_1D],
+        magBins : List[float],
+        ) -> Tuple[float, float, float]:
+    """
+    Extract the peak density of a density vs. color distribution using a
+    waveform collapse algorithm. This algorithm is based on the assumption that
+    the fidicual line should vary smoothly. Therefore, we can collapse the
+    density vs. color distribution by selecting the peak in each
+    magnitude bin which will maximize the smoothness of the fidicual line.
+
+    Parameters
+    ----------
+        colorBins: list[ndarray[float64]]
+            Color of each target in a CMD of shape m.
+        densityBins: list[ndarray[float64]]
+            Density at each point in a CMD of shape m.
+        magBins : list[float]
+            List of magnitudes to use as the bin edges for the waveform
+            collapse. This should be the same as the magBins used to generate
+            the colorBins and densityBins.
+    Returns
+    -------
+        cHighest : float
+            color of highest peak in the spline peak distribution. In the event
+            that the spline parameter space is extremply smooth and only one
+            peak is extracted over all smoothing factors then this is simply
+            the value of that peak.
+        color5th : float
+            5th percentile of the color distribution. This is used to set the
+            lower bound of the color range for the fiducial line.
+        color95th : float
+            95th percentile of the color distribution. This is used to set the
+            upper bound of the color range for the fiducial line.
+    """
+    peakList = list()
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(1,1,figsize=(10,7))
+    for color, density, mag in zip(colorBins, densityBins, magBins):
+        peaks, _ = find_peaks(density)
+        if len(peaks) == 0:
+            peakList.append(np.array([]))
+        else:
+            peakList.append(color[peaks])
+            ax.plot(color[peaks], np.ones_like(color[peaks])*mag, 'o')
+    plt.show()
+    exit()
+
+
 def spline_based_density_peak_extraction(
         color : FARRAY_1D,
         density : FARRAY_1D,
@@ -1202,6 +1252,7 @@ def fiducial_line(
         cacheDensity : bool = False,
         cacheDensityName : str = 'CMDDensity.npz',
         minMagCut : float = -np.inf,
+        method : str = 'waveform',
         uni_density: bool = False,
         binSize_min: float = 0.1,
         piecewise_linear: Union[bool,FARRAY_1D] = False,
@@ -1279,6 +1330,14 @@ def fiducial_line(
             Minimum magnitude to cut on. This is useful if you want to cut out
             the RGB. Note that this is applied before the overall magnitude
             cut (percLow and percHigh) is applied.
+        method : str, default="waveform"
+            Method to use to calculate the density. Currently the spline and
+            waveform methods are supported. The waveform method is the default
+            while the spline method is the old method used. The spline method
+            is included for backwards compatibility but may be more robust in
+            some cases. Waveform should generally result in beter fiducial
+            lines as it considers more than one magnitude bin at a time. It
+            should also be faster than the spline method generally.
         uni_density : bool, default=False
             Flag controls whether to change the sampling method to achieve a roughly
             uniform distribution of numbers of data points in filter1 magnitude
@@ -1410,31 +1469,43 @@ def fiducial_line(
             logger.info(f"Working on bin {binID}")
             logger.info(f"\tDensity...")
             logger.info(f"\tSpline based density peak extraction...")
-            # if (right - left) > (binSize_min*3):
-            #     cHighest, m, c5, c95 = ridge_bounding(vColor, mag, np.array(left).reshape(1,1), np.array(right).reshape(1,1), allowMax=allowMax)
-            # else:
             dC, cC = density_color_cut(density, vColor, mag, left, right)
-            cHighest, c5, c95 = spline_based_density_peak_extraction(
-                    cC,
-                    dC,
-                    splineSmoothMin,
-                    splineSmoothMax,
-                    splineSmoothN,
-                    colorSigCut
-                    )
-            logger.info(f"\tFiducial point found at {cHighest}")
+        densityBins = list()
+        colorBins = list()
+        for binID, (left, right) in tqdm(enumerate(zip(binsLeft, binsRight)), disable=verbose, desc="Fitting fiducial line to density", total=len(binsLeft)):
+            logger.info(f"Working on bin {binID}")
+            logger.info(f"\tDensity...")
+            logger.info(f"\tSpline based density peak extraction...")
+            dC, cC = density_color_cut(density, vColor, mag, left, right)
+            densityBins.append(dC)
+            colorBins.append(cC)
             m = (left + right)/2
-            # 
-            fiducial[binID,0] = cHighest
             fiducial[binID,1] = m
-            fiducial[binID,2] = c5
-            fiducial[binID,3] = c95
+            if method == 'spline':
+                cHighest, c5, c95 = spline_based_density_peak_extraction(
+                          cC,
+                          dC,
+                          splineSmoothMin,
+                          splineSmoothMax,
+                          splineSmoothN,
+                          colorSigCut
+                          )
+                logger.info(f"\tFiducial point found at {cHighest}")
+                fiducial[binID,0] = cHighest
+                fiducial[binID,2] = c5
+                fiducial[binID,3] = c95
+            if method=='waveform':
+                 fiducial[:] = waveform_collapse_peak_extraction(
+                    colorBins,
+                    densityBins,
+                    fiducial[:,1],
+                 )
         fiducial = fiducial[fiducial[:, 1].argsort()]
         logger.info("Completed fitting fiducial line to density!")
 
-        fiducial[:,0] = fiducial[:,0] + ff(fiducial[:, 1])
-        fiducial[:,2] = fiducial[:,2] + ff(fiducial[:, 1])
-        fiducial[:,3] = fiducial[:,3] + ff(fiducial[:, 1])
+    fiducial[:,0] = fiducial[:,0] + ff(fiducial[:, 1])
+    fiducial[:,2] = fiducial[:,2] + ff(fiducial[:, 1])
+    fiducial[:,3] = fiducial[:,3] + ff(fiducial[:, 1])
 
     slope = np.gradient(fiducial[:,3], fiducial[:,1])
     theta = np.arctan(slope)

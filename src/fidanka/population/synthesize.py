@@ -1,4 +1,8 @@
 from fidanka.isochrone.isochrone import shift_full_iso
+from fidanka.population.utils import sample_n_masses
+from fidanka.bolometric import BolometricCorrector
+from fidanka.misc.utils import closest, interpolate_arrays, get_samples
+from fidanka.isochrone.MIST import read_iso, read_iso_metadata
 
 
 import pickle as pkl
@@ -6,12 +10,44 @@ import numpy as np
 import pandas as pd
 import re
 
+import numpy.typing as npt
+
 from scipy.interpolate import interp1d, LinearNDInterpolator
 from collections.abc import Iterable
 
-FILTERPATTERN = re.compile(r'(?:(?:ACS_WFC_(F\d{3}W)_MAG)|(F\d{3}W))')
+from typing import Union, Tuple, List, Dict, Callable, Optional
 
-def mass_sample(n,mrange=(0.1,1),alpha=-2.68):
+FILTERPATTERN = re.compile(r'(?:(?:ACS_WFC_(F\d{3}W)_MAG)|(F\d{3}W))')
+FARRAY_1D = npt.NDArray[np.float64]
+
+def mass_sample(
+        n : int,
+        mrange : Tuple[float, float] = (0.1,1),
+        alpha : float = -2.68) -> FARRAY_1D:
+    """
+    Sample masses from a power law IMF.
+
+    Parameters
+    ----------
+        n : int
+            Number of samples to draw.
+        mrange : Tuple[float, float], default=(0.1,1)
+            Range of masses to sample from.
+        alpha : float, default=-2.68
+            Power law index of the IMF.
+
+    Returns
+    -------
+        sample : NDArray[float]
+            Array of sampled masses.
+
+    Examples
+    --------
+    Let's sample 10 masses from a power law IMF with a power law index of -2.68
+    between 0.1 and 1 solar masses.
+
+    >>> mass_sample(10, mrange=(0.1,1), alpha=-2.68)
+    """
     sample = np.zeros(n)
     m1 = mrange[1]**(alpha+1) - mrange[0]**(alpha+1)
     m2 = mrange[0]**(alpha+1)
@@ -21,57 +57,6 @@ def mass_sample(n,mrange=(0.1,1),alpha=-2.68):
         sm = (m1*xx + m2)**powmass
         sample[i] = sm
     return sample
-
-def inverse_cdf_sample(f, x=None):
-    if x is None:
-        x = np.linspace(0,1,100000)
-    y = f(x)
-    cdf_y = np.cumsum(y)
-    cdf_y_norm = cdf_y/cdf_y.max()
-    inverse_cdf = interp1d(cdf_y_norm, x, bounds_error=False, fill_value='extrapolate')
-    return inverse_cdf
-
-def get_samples(n,f,domain=None):
-    uniformSamples = np.random.random(n)
-    shiftedSamples = inverse_cdf_sample(f, x=domain)(uniformSamples)
-    return shiftedSamples
-
-def closest(array, target):
-    exact_value = array[array == target]
-
-    if exact_value.size > 0:
-        return exact_value[0], exact_value[0]
-
-    younger_ages = array[array < target]
-    older_ages = array[array > target]
-
-    if younger_ages.size == 0:
-        closest_lower = None
-    else:
-        closest_lower = younger_ages[np.argmin(np.abs(younger_ages - target))]
-
-    if older_ages.size == 0:
-        closest_upper = None
-    else:
-        closest_upper = older_ages[np.argmin(np.abs(older_ages - target))]
-
-    return closest_lower, closest_upper
-
-def interpolate_arrays(array_lower, array_upper, target, lower, upper):
-    array_lower = np.array(array_lower)
-    array_upper = np.array(array_upper)
-
-    # Ensure both arrays have the same shape
-    assert array_lower.shape == array_upper.shape, "Arrays must have the same shape"
-
-    # Calculate the interpolation weights
-    lower_weight = (upper - target) / (upper - lower)
-    upper_weight = (target - lower) / (upper - lower)
-
-    # Perform element-wise interpolation
-    interpolated_array = (array_lower * lower_weight) + (array_upper * upper_weight)
-
-    return interpolated_array
 
 def interpolate_eep_arrays(arr1, arr2, target, lower, upper):
     # Ensure arrays are numpy arrays
@@ -110,28 +95,65 @@ def sum_err_mag(m1, m2, s1, s2):
 
 
 class population:
-    def __init__(self, iso, alpha, bf, agePDF, n, minAge, maxAge, minMass, maxMass, artStarFuncs, distance, reddening, magName):
+    def __init__(self,
+                 iso,
+                 alpha,
+                 bf,
+                 agePDF,
+                 n,
+                 minAge,
+                 maxAge,
+                 minMass,
+                 maxMass,
+                 artStarFuncs,
+                 distance,
+                 colorExcess,
+                 magName,
+                 bolometricCorrectionTables,
+                 Rv = 3.1,
+                 ):
+
+        self.Av = Rv*colorExcess
+        self.Rv = Rv
+        self.mu = 5*np.log10(distance) - 5
+
         if isinstance(iso, str):
-            with open(iso, 'rb') as f:
-                iso = pkl.load(f)
-            isoNP = dict()
-            for age, df in iso.items():
-                isoNP[age] = df.values
-            self.iso = [iso]
-            self.isoNP = [isoNP]
+            self.iso = [read_iso(iso)]
+            self.isoMeta = [read_iso_metadata(iso)]
+            # isoNP = dict()
+            # for age, df in iso.items():
+            #     isoNP[age] = df.values
+            # self.isoNP = [isoNP]
         elif isinstance(iso, list):
-            isos = list()
-            isoNPs = list()
-            for isoFile in iso:
-                with open(isoFile, 'rb') as f:
-                    isoi = pkl.load(f)
-                    isos.append(isoi)
-                isoNP = dict()
-                for age, df in isoi.items():
-                    isoNP[age] = df.values
-                    isoNPs.append(isoNP)
-            self.iso = isos
-            self.isoNP = isoNPs
+            self.iso = [read_iso(isoFile) for isoFile in iso]
+            self.isoMeta = [read_iso_metadata(isoFile) for isoFile in iso]
+            # isoNPs = list()
+            # for isoFile in iso:
+                # isoNP = dict()
+                # for age, df in isoi.items():
+                    # isoNP[age] = df.values
+                    # isoNPs.append(isoNP)
+            # self.isoNP = isoNPs
+
+        self._bolometricCorrectors = list()
+        for iso, meta in zip(self.iso, self.isoMeta):
+            FeH = meta['[Fe/H]']
+            bc = BolometricCorrector(bolometricCorrectionTables, FeH)
+            self._bolometricCorrectors.append(bc)
+
+        for isoID, (iso, bc) in enumerate(zip(self.iso, self._bolometricCorrectors)):
+            for age, df in iso.items():
+                print(f'Calculating bolometric corrections for {age} Gyr isochrone...')
+                mags = bc.apparent_mags(
+                        10**df['log_Teff'],
+                        df['log_g'],
+                        df['log_L'],
+                        Av=self.Av,
+                        Rv=self.Rv,
+                        mu=self.mu
+                        )
+                bolCorrectedIso = pd.concat([df, mags], axis=1)
+                self.iso[isoID][age] = bolCorrectedIso
 
         self.alpha = alpha
         self.bf = bf
@@ -178,7 +200,6 @@ class population:
             sortedMasses = list()
             maxSize = 0
             for age in validAges:
-                # validMasses = validMasses.union(set(iso[age]['initial_mass'].values))
                 sortedMasses.append(np.sort(iso[age]['initial_mass'].values))
                 maxSize = max(maxSize, len(sortedMasses[-1]))
 
@@ -197,13 +218,6 @@ class population:
                         apparentMags[ageID, massID] = extracted[0]
                 print('\r', end='')
             print('')
-
-            # with open(f"apparentMagTest_{isoID}.pkl", 'wb') as f:
-            #     pkl.dump({
-            #         'ages': sortedAges,
-            #         'masses': sortedMasses,
-            #         'apparentMags': apparentMags
-            #     }, f)
 
             num_pairs = sum([len(mass_list) for mass_list in sortedMasses])
 
@@ -235,20 +249,49 @@ class population:
         youngerIso = self.isoNP[popI][younger]
         olderIso = self.isoNP[popI][older]
         isoAtAge = interpolate_eep_arrays(youngerIso, olderIso, age, younger, older)
-        isoShiftedToDistRed = shift_full_iso(isoAtAge[:, self._goodFilterIdx], self.distance, self.reddening, self._effectiveWavelengths)
+
+        # TODO Use the BolometricCorrector to get the bolometric correction
+        # isoShiftedToDistRed = shift_full_iso(isoAtAge[:, self._goodFilterIdx], self.distance, self.reddening, self._effectiveWavelengths,
+        #                                      self._goodColumnNames, self._responseFunctions)
+
+        massMap = isoAtAge[:,2]
+        sortedMasses = np.sort(massMap)
+        magMap = isoShiftedToDistRed[:, self._completnessCheckColumnID]
+        completnessMap = interp1d(massMap, magMap, kind='linear', bounds_error=False, fill_value=np.nan)
+        completness = lambda m, alpha: self._completness(completnessMap(m))
         resetMass = False
-        mMin = isoAtAge[:, 2].min()
-        mMax = isoAtAge[:, 2].max()
+        mMin = massMap.min()
+        mMax = massMap.max()
         if mass is None:
             resetMass = True
-            mass = mass_sample(1, mrange=(mMin, mMax), alpha=self.alpha)[0]
+            mass = sample_n_masses(1, completness,self.alpha,mMin,mMax)[0]
+            # print("SELECTING MASS ", mass)
         else:
             if isinstance(mass, Iterable):
                 mass = mass[0]
         lowerMass, upperMass = closest(isoAtAge[:,2], mass)
+        if lowerMass == None:
+            lowerMass = mMin
+            upperMass = sortedMasses[1]
+            print("Falling back on end of array for lower mass")
+            print(f"Using masses {lowerMass} and {upperMass}")
+        if upperMass == None:
+            upperMass = mMax
+            lowerMass = sortedMasses[-2]
+            print("Falling back on end of array for upper mass")
+            print(f"Using masses {lowerMass} and {upperMass}")
         lowerMassPoint = isoShiftedToDistRed[isoAtAge[:,2] == lowerMass]
         upperMassPoint = isoShiftedToDistRed[isoAtAge[:,2] == upperMass]
-        targetSample = interpolate_arrays(lowerMassPoint, upperMassPoint, mass, lowerMass, upperMass)[0]
+        try:
+            targetSample = interpolate_arrays(lowerMassPoint, upperMassPoint, mass, lowerMass, upperMass)[0]
+        except AssertionError:
+            print(lowerMassPoint)
+            print(upperMassPoint)
+            print(mass)
+            print(lowerMass)
+            print(upperMass)
+            print(mMin, mMax)
+            raise
 
         for rID, (ID, interpFunc) in enumerate(self.noiseFuncs.items()):
             samples[idx][2+rID] = sum_mag(targetSample[rID], samples[idx][2+rID])

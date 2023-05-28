@@ -52,8 +52,8 @@ def load_bol_table(
                   )
               ]
     AvRv = [table[["Av","Rv"]].iloc[0] for table in tables]
-    identString = [f"Av={avrv['Av']}:Rv={avrv['Rv']}" for avrv in AvRv]
-    out = {ident: table for ident, table in zip(identString, tables)}
+    # identString = [f"Av={avrv['Av']}:Rv={avrv['Rv']}" for avrv in AvRv]
+    out = {(avrv['Av'], avrv['Rv']): table for avrv, table in zip(AvRv, tables)}
     return out
 
 def load_sub_bol_table(

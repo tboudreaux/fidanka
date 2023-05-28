@@ -11,6 +11,7 @@ import re
 from tqdm import tqdm
 
 from scipy.interpolate import interp1d
+from scipy.integrate import quad
 
 FARRAY_1D = npt.NDArray[np.float64]
 
@@ -18,17 +19,48 @@ def shift_full_iso(
         iso : np.ndarray,
         distance : float,
         reddening : float,
-        effectiveWavelengths : list
+        effectiveWavelengths : list,
+        columnNames : list,
+        responseFunctions : dict
         ):
     """
     Shift the isochrone around in distance and reddining.
     """
     mu = 5*np.log10(distance) - 5
     shifted = np.zeros_like(iso)
-    for ID, (filterValues, eW) in enumerate(zip(iso.T, effectiveWavelengths)):
-        X = calc_extinction_coef(eW)
-        A = X*reddening
-        shifted[:, ID] = filterValues + mu + A
+    for ID, (filterValues, eW, name) in enumerate(zip(iso.T, effectiveWavelengths, columnNames)):
+        # print(filterValues)
+        responseFunction = responseFunctions[name]
+        print(f"Integrating from {responseFunction[1]} to {responseFunction[2]}")
+        df = lambda l : responseFunction[0](l)
+        da = lambda l : (reddening*3.1)*calc_extinction_coef(l)
+        F = quad(df, responseFunction[1], responseFunction[2])[0] 
+        A = quad(da, responseFunction[1], responseFunction[2])[0]
+        norm = 1/F
+        print(f"Normalization factor: {norm}")
+        A = norm*A
+        # import matplotlib.pyplot as plt
+        # plt.plot(np.linspace(responseFunction[1], responseFunction[2], 1000), responseFunction[0](np.linspace(responseFunction[1], responseFunction[2], 1000)))
+        # plt.title(f"Filter {ID} ({name})")
+        # plt.xlabel("Wavelength (nm)")
+        # plt.ylabel("Response")
+        # plt.show()
+        print(f"Total response in filter {ID} ({name}): {F}")
+        print(f"Total extinction in filter {ID} ({name}): {A}")
+        dM = filterValues + A + mu
+        print(f"Total extinction in filter {ID} ({name}): {dM}")
+        print(f"Shifted filter {ID}({name}) by {mu} + {dM} = {mu+dM}")
+        shifted[:, ID] = filterValues + mu + dM
+        exit()
+
+        # print(eW)
+        # X = calc_extinction_coef(eW)
+        # print(f"Extinction coefficient for filter {ID} @ {eW}nm: {X}")
+        # A = (X*3.1)*reddening
+        # print(f"Extinction in filter {ID}: {A}")
+        # shifted[:, ID] = filterValues + mu + A
+        # print(f"Shifted filter {ID} by {mu} + {A} = {mu+A}")
+        # print(f"Shifted filter {ID} by {mu+A} = {shifted[:, ID]}")
     return shifted
 
 def shift_isochrone(
@@ -74,11 +106,19 @@ def shift_isochrone(
             Apparent color, shifted by distance and reddining
     """
     mu = 5*np.log10(distance) - 5
+    print(f"Distance: {distance} pc")
+    print(f"Distance modulus: {mu}")
     X1 = calc_extinction_coef(filter1EffectiveWavelength)
     X2 = calc_extinction_coef(filter2EffectiveWavelength)
+    print(f"Extinction coefficient for filter 1: {X1}")
+    print(f"Extinction coefficient for filter 2: {X2}")
     A1 = X1*reddening
     A2 = X2*reddening
+    print(f"Color excess: {reddening}")
+    print(f"Extinction in filter 1: {A1}")
+    print(f"Extinction in filter 2: {A2}")
     aptCol = color + (A1 - A2)
+    print(f"Apparent color: {aptCol}")
     if rFilterOrder:
         aptMag = magnitude + mu + A2
     else:
@@ -105,15 +145,25 @@ def calc_extinction_coef(wEffective, Rv=3.1):
         extinctionCoef : float
             Extinction coefficient for the given wavelength
     """
-    iL = 1e3/wEffective
-    if 0.3 <= iL <= 8:
+    print(f"Effective wavelength: {wEffective} nm")
+    w = wEffective/1000
+    print(f"Effective wavelength: {w} um")
+    iL = 1/(w)
+    print(f"iL: {iL}")
+    if 0.3 <= iL <= 1.1:
+        print("Coefficients for infrared")
         a = 0.574*iL**1.61
         b = -0.527*iL**1.61
     elif 1.1 <= iL <= 3.3:
+        print("Coefficients for optical")
         y = iL - 1.82
         a = 1 + 0.17699*y - 0.50447*y**2 - 0.02427*y**3 + 0.72085*y**4 + 0.01979*y**5 - 0.77530*y**6 + 0.32999*y**7
         b = 1.41338*y + 2.28305*y**2 + 1.07233*y**3 - 5.38434*y**4 - 0.62251*y**5 + 5.30260*y**6 - 2.09002*y**7
+        print(f"y: {y}")
+        print(f"a: {a}")
+        print(f"b: {b}")
     elif 3.3 <= iL <= 8:
+        print("Coefficients for ultraviolet")
         if 5.9 <= iL <= 8:
             Fa = -0.04473*(iL - 5.9)**2 - 0.009779*(iL - 5.9)**3
             Fb = 0.2130*(iL - 5.9)**2 + 0.1207*(iL - 5.9)**3
@@ -125,7 +175,7 @@ def calc_extinction_coef(wEffective, Rv=3.1):
         b = -3.090 + 1.825*iL + 1.206/((iL - 4.62)**2 + 0.263) + Fb
     else:
         raise ValueError("Wavelength out of range")
-    return (a+b)/Rv
+    return a+(b/Rv)
 
 def load_ISO_CMDs(
         root : str

@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name="fidanka"
 authors = [
 	{name = "Thomas M. Boudreaux", email="thomas@boudreauxmail.com"},
+	{name = "Martin Ying", email="martin.ying.gr@dartmouth.edu"},
 	]
 description="Fiducual line generation and isochone fitting"
 readme="README.md"
@@ -28,7 +29,7 @@ dependencies = [
 	"pybind11",
 	"emcee"
 	]
-version = "0.5.2"
+version = "0.5.2.1"
 
 [project.urls]
 Homepage = "https://github.com/tboudreaux/fidanka"
