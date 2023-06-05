@@ -1,5 +1,7 @@
 from fidanka.exception.exception import shape_dimension_check
 from fidanka.warn.warnings import warning_traceback
+from fidanka.fiducial.utils import clean_bins, normalize_density_magBin
+from fidanka.fiducial.utils import GMM_component_measurment
 # from fidanka.ext.nearest_neighbors import nearest_neighbors
 
 import numpy as np
@@ -16,8 +18,6 @@ from scipy.signal import savgol_filter, find_peaks
 from scipy.interpolate import splrep, BSpline, interp1d
 from scipy.spatial._qhull import ConvexHull as ConvexHullType
 from scipy.stats import norm
-
-from sklearn.mixture import GaussianMixture
 
 from tqdm import tqdm
 
@@ -101,8 +101,6 @@ def ridge_bounding(
     shape_dimension_check(a1, a2)
 
     gaus = lambda x, a, b, c: a*np.exp(-(x-b)**2/(2*c**2))
-#    binSize = binsLeft[1] - binsLeft[0]
-#    binsRight = binsLeft + binSize
     ridgeLine = np.zeros(shape=(4,binsLeft.shape[0]))
     for binID, (left, right) in enumerate(zip(binsLeft, binsRight)):
         cut = (a2 >= left) & (a2 < right)
@@ -123,32 +121,58 @@ def ridge_bounding(
             ridgeLine[2,binID] = np.percentile(Xss,4)
             ridgeLine[3,binID] = np.percentile(Xss,96)
         except RuntimeError:
-            # lenOkay = cut[cut == True].shape[0]
-            # print(f"Unable to fit for bin {binID} from {left}->{right} with {lenOkay} targets")
-            # if len(histV) > 1 and allowMax:
-            #     print("Falling back to max value")
-            #     ridgeLine[:, binID] = histC[np.argmax(histV)]
-            # elif len(histV) > 1 and not allowMax:
-            #     print("Falling back to nan")
-            #     ridgeLine[:, binID] = np.nan
             ridgeLine[0,binID] = np.median(cut)
             ridgeLine[1,binID] = (left+right)/2
             ridgeLine[2,binID] = np.percentile(Xss,4)
             ridgeLine[3,binID] = np.percentile(Xss,96)
-        # fit = curve_fit(
-        #                 gaus,
-        #                 histC,
-        #                 histV,
-        #                 p0=[max(histV),histC[histV.argmax()],0.01]
-        #                 )
-        # ridgeLine[0,binID] = fit[0][1]
-        # ridgeLine[1,binID] = (left+right)/2
-        # ridgeLine[2,binID] = np.percentile(Xss,4)
-        # ridgeLine[3,binID] = np.percentile(Xss,96)
-    # return ridgeLine[:, 1:-1]
     return ridgeLine[:, :]
 
-def median_ridge_line_estimate()
+def median_ridge_line_estimate(color,
+                               mag,
+                               density,
+                               binSize=0.3,
+                               percLow=0.01,
+                               percHigh=0.99,
+                               binSize='adaptive',
+                               max_Num_bin = False,
+                               binSize_min=0.1,
+                               sigmaCut = 3,
+                               cleaningIterations=10,
+                               components=100):
+
+    ridgeLine = np.zeros(shape=(4,binsLeft.shape[0]))
+
+    density = normalize_density_magBin(color, mag, density, binSize=binSize)
+    colorBins, magBins, densityBins = bin_color_mag_density(
+            color,
+            mag,
+            density,
+            percLow,
+            percHigh,
+            binSize,
+            max_Num_bin,
+            binSize_min)
+    colorBins, magBins, densityBins = clean_bins(
+            colorBins,
+            magBins,
+            densityBins,
+            sigma=sigmaCut,
+            iteration=cleaningIterations
+            )
+
+    gmm_means = GMM_component_measurment(colorBins, densityBins,n=components)
+    color = np.median(gmm_means, axis=1)
+    mag = np.array([np.mean(x) for x in magBins])
+
+    lowPercentile = np.percentile(gmm_means, 68.97, axis=1)
+    highPercentile = np.percentile(gmm_means, 100-68.97, axis=1)
+
+    ridgeLine[:,0] = color
+    ridgeLine[:,1] = mag
+    ridgeLine[:,2] = lowPercentile
+    ridgeLine[:,3] = highPercentile
+
+    return ridgeLine
 
 def instantaious_hull_density_cpp(
         r0: R2_VECTOR,
@@ -614,12 +638,76 @@ def get_mag_and_color_ranges(
     magRange = percentile_range(mag, percLow, percHigh)
     return colorRange, magRange
 
+def bin_color_mag_density(
+        color : FARRAY_1D,
+        mag : FARRAY_1D,
+        density : FARRAY_1D,
+        percLow : float,
+        percHigh : float,
+        binSize : Union[str, float],
+        max_Num_bin : Union[bool, int] = False,
+        binSize_min : float = 0.1,
+        ) -> Tuple[FARRAY_1D, FARRAY_1D, FARRAY_1D]:
+    """
+    Use the bin edges from mag_bins to split the color, mag, and density arrays
+    into lists of arrays.
+
+    Parameters
+    ----------
+        color : np.ndarray[float64]
+            1D array of color of shape m for the stars in the CMD
+        mag : np.ndarray[float64]
+            1D array of magnitude of shape m for the stars in the CMD
+        density : np.ndarray[float64]
+            1D array of density of shape m for the stars in the CMD
+        percLow : float
+            Lower bound percentile to base range on
+        percHigh : float
+            Upper bound percentile to base range on
+        binSize : Union[str, float]
+            Size of the bins to use. If 'adaptive' will attempt to keep
+            counting statistics the same throughout.
+        max_Num_bin : Union[bool, int]
+            False or `0` will not limit the number of bins. Any other integer
+            will limit the number of bins to that number.
+        binSize_min : float
+            Minimum bin size to use when using adaptive binning
+
+    Returns
+    -------
+        colorBins : List[np.ndarray[float64]]
+            List of arrays of color of shape m for the stars in the CMD
+        magBins : List[np.ndarray[float64]]
+            List of arrays of magnitude of shape m for the stars in the CMD
+        densityBins : List[np.ndarray[float64]]
+            List of arrays of density of shape m for the stars in the CMD
+    """
+    if max_Num_bin == 0:
+        max_Num_bin = False
+    left, right = mag_bins(
+            mag,
+            percHigh,
+            percLow,
+            binSize,
+            max_Num_bin=max_Num_bin,
+            binSize_min=binSize_min)
+
+    colorBins = list()
+    magBins = list()
+    densityBins = list()
+    for l, r in zip(left, right):
+        condition = (m >= left) & (m < right)
+        colorBins.append(color[condition])
+        magBins.append(mag[condition])
+        densityBins.append(density[condition])
+    return colorBins, magBins, densityBins
+
 def mag_bins(
         mag : Union[FARRAY_1D, pd.Series],
         percHigh : float,
         percLow : float,
         binSize : Union[str, float],
-        max_Num_bin: Union[str, int] = False,
+        max_Num_bin: Union[bool, int] = False,
         binSize_min: float = 0.1,
         ) -> Tuple[FARRAY_1D, FARRAY_1D]:
     """
@@ -650,12 +738,6 @@ def mag_bins(
     magRange = percentile_range(mag, percLow, percHigh)
     if binSize == 'adaptive':
         len_mag = len(mag)
-        # bin_width = 0.1
-        # binsLeft = np.arange(magRange[1], magRange[0], 0.1)
-        # binsRight = binsLeft + 0.01
-        # Bin_count = [len(mag[(mag >= binsLeft[i]) & (mag < binsRight[i])]) for i in range(len(binsLeft))]
-        # Bin_min = min(Bin_count)
-        # Bin_count_wanted = max(Bin_count)
         if max_Num_bin == False:
             Bin_count_wanted = 50
         else:
@@ -1077,7 +1159,7 @@ def approximate_fiducial_line_function(
 
     """
     binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize)
-    fiducialLine = ridge_bounding(color, mag, binsLeft, binsRight, allowMax=allowMax)
+    fiducialLine = median_ridge_line_estimate(color, mag, binsLeft, binsRight, allowMax=allowMax)
     ff = interp1d(fiducialLine[1], fiducialLine[0], bounds_error=False, fill_value='extrapolate')
     return ff
 
@@ -1088,7 +1170,6 @@ def verticalize_CMD(
         percLow : float = 1,
         percHigh : float = 99,
         allowMax : bool = False,
-        methpd="GMM",
         ) -> Tuple[FARRAY_1D, Callable]:
     """
     Given some CMD fit an approximate fiducual line and use that to verticalize
@@ -1111,9 +1192,6 @@ def verticalize_CMD(
             value in the color distribution to be used as a fiducial point if
             the gaussian fitting fails. If false and if the gaussian curve fit
             failes then a nan will be used.
-        method : str, default="GMM"
-            Method to use to calculate the fiducial line. Options are "GMM"
-            for gaussian mixture model or "Ridge" for ridge bounding.
 
     Returns
     -------
@@ -1125,12 +1203,7 @@ def verticalize_CMD(
             of magnitude (so as to make it a one-to-one function)
 
     """
-<<<<<<< HEAD
-    assert method in ["GMM", "Ridge"], "method must be either 'GMM' or 'Ridge'"
     ff = approximate_fiducial_line_function(color, mag, percLow=percLow, percHigh=percHigh, binSize=binSize, allowMax=allowMax)
-=======
-    ff = approximate_fiducial_line_function(color, mag, binSize, percLow=percLow, percHigh=percHigh, allowMax=allowMax)
->>>>>>> 44c2fdb5b121d8824a13feae94beae6c0cde721b
     vColor = color - ff(mag)
     return vColor, ff
 
@@ -1404,6 +1477,7 @@ def fiducial_line(
             the coordinates of the ridgeLine along the a2 axis (these
             are the infered centers points of the bins)
     """
+    # TODO Break out logger setup into its own setup function
     logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter('%(message)s')
@@ -1416,22 +1490,13 @@ def fiducial_line(
     else:
         logger.setLevel(logging.WARNING)
         handler.setLevel(logging.WARNING)
-
     warnings.showwarning = warning_traceback
+
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
     binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize, binSize_min = binSize_min)
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
-    vColor, ff = verticalize_CMD(color, mag, binSize, percLow = percLow, percHigh = percHigh, allowMax=allowMax)
+    # vColor, ff = verticalize_CMD(color, mag, binSize, percLow = percLow, percHigh = percHigh, allowMax=allowMax)
 
-    # if uni_density==True:
-    #     filter1, error1, filter2, error2 = renormalize(filter1,filter2,error1,error2)
-    #     baseSampling = np.zeros(filter1.shape[0])
-    #     filter1 = shift_photometry_by_error(filter1, error1, baseSampling)
-    #     filter2 = shift_photometry_by_error(filter2, error2, baseSampling)
-    #     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
-    #     vColor = ff(mag) - color
-
-<<<<<<< HEAD
     vColor, ff = verticalize_CMD(color, mag, percLow, percHigh, appxBinSize, allowMax=allowMax)
 
     if cacheDensity and os.path.exists(cacheDensityName):
@@ -1458,26 +1523,24 @@ def fiducial_line(
         if cacheDensity:
             with open(cacheDensityName, 'wb') as f:
                 np.savez(f , density=density, mcruns=mcruns)
-=======
-    import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(1,3,figsize=(15,5))	
-    axs[2].scatter(vColor, mag, s=1)	
-    axs[2].invert_yaxis()
-    mask = [np.abs(vColor[i]) < 3*np.sqrt(error1[i]**2 + error2[i]**2) for i in range(len(filter1))]	
-    filter1, error1, filter2, error2 = filter1[mask], error1[mask], filter2[mask], error2[mask]	
-
-    color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)	
-    vColor = ff(mag) - color	
-    binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize, binSize_min=binSize_min)
-    axs[0].scatter(vColor, mag, s=1)
-    axs[1].scatter(color, mag, s=1)
-    mag_ver = np.linspace(min(filter1),max(filter1),100)
-    color_ver = ff(mag_ver)
-    axs[1].plot(color_ver,mag_ver,c='r')
-    axs[0].invert_yaxis()
-    axs[1].invert_yaxis()
-    plt.show()
->>>>>>> 44c2fdb5b121d8824a13feae94beae6c0cde721b
+    # import matplotlib.pyplot as plt
+    # fig, axs = plt.subplots(1,3,figsize=(15,5))	
+    # axs[2].scatter(vColor, mag, s=1)	
+    # axs[2].invert_yaxis()
+    # mask = [np.abs(vColor[i]) < 3*np.sqrt(error1[i]**2 + error2[i]**2) for i in range(len(filter1))]	
+    # filter1, error1, filter2, error2 = filter1[mask], error1[mask], filter2[mask], error2[mask]	
+    #
+    # color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)	
+    # vColor = ff(mag) - color	
+    # binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize, binSize_min=binSize_min)
+    # axs[0].scatter(vColor, mag, s=1)
+    # axs[1].scatter(color, mag, s=1)
+    # mag_ver = np.linspace(min(filter1),max(filter1),100)
+    # color_ver = ff(mag_ver)
+    # axs[1].plot(color_ver,mag_ver,c='r')
+    # axs[0].invert_yaxis()
+    # axs[1].invert_yaxis()
+    # plt.show()
 
     fiducial=np.zeros(shape=(binsLeft.shape[0],5))
     logger.info("Fitting fiducial line to density...")

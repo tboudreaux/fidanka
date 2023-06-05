@@ -1,6 +1,8 @@
 import numpy as np
 import numpy.typing as npt
 
+from sklearn.mixture import GaussianMixture
+
 from typing import List, Tuple, Union
 
 IARRAY_1D = npt.NDArray[np.int32]
@@ -104,3 +106,41 @@ def normalize_density_magBin(
         normalizedDensity = d/meanBinDensity
         normDensity[IDx] = normalizedDensity
     return normDensity
+
+def GMM_component_measurment(xB, yB, n=50):
+    """
+    Fit a Gaussian Mixture Model to each bin of a CMD and return the mean of
+    each component.
+
+    Parameters
+    ----------
+        xB : List[FARRAY_1D]
+            List of color bins.
+        yB : List[FARRAY_1D]
+            List of magnitude bins.
+        n : int, default=50
+            Number of components to fit to each bin.
+
+    Returns
+    -------
+        gmm_means : FARRAY_2D_2C
+            List of the means of the Gaussian Mixture Models fit to each bin.
+
+    """
+    n_bins = len(xB)
+    gmm_means = []
+
+    for i_bin in range(n_bins):
+        x_bin = np.expand_dims(xB[i_bin], axis=1)
+        y_bin = yB[i_bin]
+
+        # Normalize densities so they can be used as weights
+        weights = y_bin / np.sum(y_bin)
+
+        gmm = GaussianMixture(n_components=n, random_state=42)
+        gmm.fit(x_bin, weights)
+
+        gmm_means.append(gmm.means_)
+
+    gmm_means = np.squeeze(gmm_means)
+    return gmm_means
