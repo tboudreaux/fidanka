@@ -2,7 +2,9 @@ from fidanka.exception.exception import shape_dimension_check
 from fidanka.warn.warnings import warning_traceback
 from fidanka.fiducial.utils import clean_bins, normalize_density_magBin
 from fidanka.fiducial.utils import GMM_component_measurment
-# from fidanka.ext.nearest_neighbors import nearest_neighbors
+from fidanka.fiducial.utils import median_ridge_line_estimate
+from fidanka.fiducial.utils import percentile_range
+from fidanka.fiducial.methods import plm
 
 import numpy as np
 import pandas as pd
@@ -127,52 +129,6 @@ def ridge_bounding(
             ridgeLine[3,binID] = np.percentile(Xss,96)
     return ridgeLine[:, :]
 
-def median_ridge_line_estimate(color,
-                               mag,
-                               density,
-                               binSize=0.3,
-                               percLow=0.01,
-                               percHigh=0.99,
-                               binSize='adaptive',
-                               max_Num_bin = False,
-                               binSize_min=0.1,
-                               sigmaCut = 3,
-                               cleaningIterations=10,
-                               components=100):
-
-    ridgeLine = np.zeros(shape=(4,binsLeft.shape[0]))
-
-    density = normalize_density_magBin(color, mag, density, binSize=binSize)
-    colorBins, magBins, densityBins = bin_color_mag_density(
-            color,
-            mag,
-            density,
-            percLow,
-            percHigh,
-            binSize,
-            max_Num_bin,
-            binSize_min)
-    colorBins, magBins, densityBins = clean_bins(
-            colorBins,
-            magBins,
-            densityBins,
-            sigma=sigmaCut,
-            iteration=cleaningIterations
-            )
-
-    gmm_means = GMM_component_measurment(colorBins, densityBins,n=components)
-    color = np.median(gmm_means, axis=1)
-    mag = np.array([np.mean(x) for x in magBins])
-
-    lowPercentile = np.percentile(gmm_means, 68.97, axis=1)
-    highPercentile = np.percentile(gmm_means, 100-68.97, axis=1)
-
-    ridgeLine[:,0] = color
-    ridgeLine[:,1] = mag
-    ridgeLine[:,2] = lowPercentile
-    ridgeLine[:,3] = highPercentile
-
-    return ridgeLine
 
 def instantaious_hull_density_cpp(
         r0: R2_VECTOR,
@@ -578,33 +534,6 @@ def renormalize(
     return filter1_renomalized, error1_renomalized, filter2_renomalized, error2_renomalized
 
 
-
-
-
-def percentile_range(
-        X : Union[FARRAY_1D, pd.Series],
-        percLow : float,
-        percHigh : float
-        ) -> Tuple[float, float]:
-    """
-    Extract ranges from an array based on requested percentiles
-
-    Parameters
-    ----------
-        X : Union[ndarray[float64], pd.Series]
-            Array to extract range from
-        percLow : float
-            Lower bound percentile to base range on
-        percHigh : float
-            Upper bound percentile to base range on
-
-    Returns
-    -------
-        xRange : Tuple[float, float]
-            range of X between its percLow and percHigh percentiles.
-    """
-    xRange = (np.percentile(X, percLow), np.percentile(X, percHigh))
-    return xRange
 
 def get_mag_and_color_ranges(
         color : Union[FARRAY_1D, pd.Series],
@@ -1493,21 +1422,30 @@ def fiducial_line(
     warnings.showwarning = warning_traceback
 
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
-    binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize, binSize_min = binSize_min)
-    color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
-    # vColor, ff = verticalize_CMD(color, mag, binSize, percLow = percLow, percHigh = percHigh, allowMax=allowMax)
-
     vColor, ff = verticalize_CMD(color, mag, percLow, percHigh, appxBinSize, allowMax=allowMax)
 
-    if cacheDensity and os.path.exists(cacheDensityName):
-        logger.info("Using cached density...")
-        loaded = np.load(cacheDensityName)
-        density = loaded["density"]
-        mcrunsLoaded = loaded["mcruns"]
-        if mcrunsLoaded != mcruns:
-            logger.debug(f"mcrunsLoaded: {mcrunsLoaded}")
-            raise ValueError(f"mcruns does not match cached value! ({mcruns} != {mcrunsLoaded})")
+    fiducial=np.zeros(shape=(binsLeft.shape[0],5))
+    logger.info("Fitting fiducial line to density...")
+    if piecewise_linear != False:
+        binsLeft, binsRight = mag_bins(
+                mag,
+                percLow,
+                percHigh,
+                binSize,
+                binSize_min = binSize_min
+                )
+        # TODO Figure out what i should be here? Should this be in a loop?
+        plm(color, mag, piecewise_linear, binsLeft, binsRight, 0)
     else:
+        if cacheDensity and os.path.exists(cacheDensityName):
+            logger.info("Using cached density...")
+            loaded = np.load(cacheDensityName)
+            density = loaded["density"]
+            mcrunsLoaded = loaded["mcruns"]
+            if mcrunsLoaded != mcruns:
+                logger.debug(f"mcrunsLoaded: {mcrunsLoaded}")
+                raise ValueError(f"mcruns does not match cached value! "
+                                 f"({mcruns} != {mcrunsLoaded})")
         density = MC_convex_hull_density_approximation(
                 filter1,
                 filter2,
@@ -1517,141 +1455,43 @@ def fiducial_line(
                 convexHullPoints=convexHullPoints,
                 mcruns=mcruns,
                 pbar=pbar,
-                uni_density=uni_density,
                 )
-
         if cacheDensity:
             with open(cacheDensityName, 'wb') as f:
                 np.savez(f , density=density, mcruns=mcruns)
-    # import matplotlib.pyplot as plt
-    # fig, axs = plt.subplots(1,3,figsize=(15,5))	
-    # axs[2].scatter(vColor, mag, s=1)	
-    # axs[2].invert_yaxis()
-    # mask = [np.abs(vColor[i]) < 3*np.sqrt(error1[i]**2 + error2[i]**2) for i in range(len(filter1))]	
-    # filter1, error1, filter2, error2 = filter1[mask], error1[mask], filter2[mask], error2[mask]	
-    #
-    # color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)	
-    # vColor = ff(mag) - color	
-    # binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize, binSize_min=binSize_min)
-    # axs[0].scatter(vColor, mag, s=1)
-    # axs[1].scatter(color, mag, s=1)
-    # mag_ver = np.linspace(min(filter1),max(filter1),100)
-    # color_ver = ff(mag_ver)
-    # axs[1].plot(color_ver,mag_ver,c='r')
-    # axs[0].invert_yaxis()
-    # axs[1].invert_yaxis()
-    # plt.show()
+        # TODO finish implimenting the helper functions here, should be easy
+        # The biggest thing will be thinking about the datascrutrure. We need
+        # Some way of representing an arbitrary number of fiducial lines
 
-    fiducial=np.zeros(shape=(binsLeft.shape[0],5))
-    logger.info("Fitting fiducial line to density...")
-    if piecewise_linear != False:
-        import emcee
-        from multiprocessing import Pool
-        masks = [((mag >= binsLeft[i]) & (mag < binsRight[i])) for i in range(len(binsLeft))]
-        binned_mag = [mag[mask] for mask in masks]
-        binned_color = [color[mask] for mask in masks]
-        colorLeft = [min(binned_color[i]) for i in range(len(binned_color))]
-        colorRight = [max(binned_color[i]) for i in range(len(binned_color))]
-        color_error = np.sqrt(error1**2 + error2**2)
-        binned_color_error = [color_error[mask] for mask in masks]
-        cbin, m, _, _ = ridge_bounding(color, mag, binsLeft, binsRight, allowMax=allowMax)
-        nwalkers = piecewise_linear[0]
-        theta = np.concatenate((cbin,m))
-        theta = np.tile(theta,(nwalkers,1))
-        stds = np.concatenate((np.array([np.std(binned_color[i]) for i in range(len(cbin))]),np.array([np.std(binned_mag[i]) for i in range(len(cbin))])))
-        for i in range(nwalkers):
-            if i != 0:
-                theta[i] += np.random.normal(0, stds, len(cbin)*2)
-        nwalkers, ndim = theta.shape
-        print("Number of dimension = {}".format(ndim))
-        with Pool() as pool:
-            sampler = emcee.EnsembleSampler(
-                nwalkers, ndim, log_probability, args=(binned_mag, binned_color, binned_color_error,binsLeft, binsRight, colorLeft, colorRight), pool=pool
-            )
-            sampler.run_mcmc(theta, piecewise_linear[1], progress=True, skip_initial_state_check = True)
-        flat_samples = sampler.get_chain(flat=True)
-        log_probs = sampler.get_log_prob(flat=True)
-        print("Log_probability of initial guess is {}".format(log_probs[0]))
-        print("Log_probability of best match is {}".format(np.max(log_probs)))
-        best_fit_val = flat_samples[np.argmax(log_probs)]
-        for binID in range(len(binsLeft)):
-            c5, c95 = percentile_range(binned_color[binID],5,95)
-            m = best_fit_val[binID + len(cbin)]
-            cHighest = best_fit_val[binID]
-            fiducial[binID,0] = cHighest 
-            fiducial[binID,1] = m
-            fiducial[binID,2] = c5
-            fiducial[binID,3] = c95
-    else:
-        if cacheDensity and os.path.exists(cacheDensityName):
-            logger.info("Using cached density...")
-            loaded = np.load(cacheDensityName)
-            density = loaded["density"]
-            mcrunsLoaded = loaded["mcruns"]
-            if mcrunsLoaded != mcruns:
-                logger.debug(f"mcrunsLoaded: {mcrunsLoaded}")
-                raise ValueError(f"mcruns does not match cached value! ({mcruns} != {mcrunsLoaded})")
-        else:
-            density = MC_convex_hull_density_approximation(
-                    filter1,
-                    filter2,
-                    error1,
-                    error2,
-                    reverseFilterOrder,
-                    convexHullPoints=convexHullPoints,
-                    mcruns=mcruns,
-                    pbar=pbar,
-                    )
-        for binID, (left, right) in tqdm(enumerate(zip(binsLeft, binsRight)), disable=verbose, desc="Fitting fiducial line to density", total=len(binsLeft)):
-            logger.info(f"Working on bin {binID}")
-            logger.info(f"\tDensity...")
-            logger.info(f"\tSpline based density peak extraction...")
-            dC, cC = density_color_cut(density, vColor, mag, left, right)
-        densityBins = list()
-        colorBins = list()
-        for binID, (left, right) in tqdm(enumerate(zip(binsLeft, binsRight)), disable=verbose, desc="Fitting fiducial line to density", total=len(binsLeft)):
-            logger.info(f"Working on bin {binID}")
-            logger.info(f"\tDensity...")
-            logger.info(f"\tSpline based density peak extraction...")
-            dC, cC = density_color_cut(density, vColor, mag, left, right)
-            densityBins.append(dC)
-            colorBins.append(cC)
-            m = (left + right)/2
-            fiducial[binID,1] = m
-            if method == 'spline':
-                cHighest, c5, c95 = spline_based_density_peak_extraction(
-                          cC,
-                          dC,
-                          splineSmoothMin,
-                          splineSmoothMax,
-                          splineSmoothN,
-                          colorSigCut
-                          )
-                logger.info(f"\tFiducial point found at {cHighest}")
-                fiducial[binID,0] = cHighest
-                fiducial[binID,2] = c5
-                fiducial[binID,3] = c95
-            if method=='waveform':
-                 fiducial[:] = waveform_collapse_peak_extraction(
-                    colorBins,
-                    densityBins,
-                    fiducial[:,1],
-                 )
-        fiducial = fiducial[fiducial[:, 1].argsort()]
-        logger.info("Completed fitting fiducial line to density!")
+        # I think an fiducual object might be warrented. We could then return
+        # a list of these. Each with helpful information about errors and whatnot
+        
 
-    fiducial[:,0] = fiducial[:,0] + ff(fiducial[:, 1])
-    fiducial[:,2] = fiducial[:,2] + ff(fiducial[:, 1])
-    fiducial[:,3] = fiducial[:,3] + ff(fiducial[:, 1])
+        # Basic implintation (without thinking about datastructure will look like)
+        vColorBins, vMagBins, vDensityBins = bin_color_mag_density(
+                vColor.values,
+                vMag.values,
+                vDensity)
+        vColorBins, vMagBins, vDensityBins = clean_bins(
+                vColorBins,
+                vMagBins,
+                vDensityBins,
+                sigma=3,
+                iterations=5)
 
-    slope = np.gradient(fiducial[:,3], fiducial[:,1])
-    theta = np.arctan(slope)
-    fiducial[:,4] = perp_distance(fiducial[:,2], fiducial[:,3], theta)
+        # TODO define what n_expected_lines is 
+        # TODO should there be an automated way to guess this?
+        gmm_vert_means = GMM_component_measurment(
+                vColorBins,
+                vDensityBins,
+                n=n_expected_lines)
 
-    # remove all rows of fiducial which contain a nan value
-    logger.info("Removing nan values from fiducial line...")
-    fiducial = fiducial[~np.isnan(fiducial).any(axis=1)]
+        lines = np.zeros(shape=(len(gmmMags),n_expected_lines))
+        for idx, (cs, m) in enumerate(zip(gmm_vert_means, gmmMags)):
+            lines[idx] = cs[np.argsort(cs)]
 
-    # fiducial = fiducial[fiducial[:,1] > minMagCut]
+        # TODO Auto identify the MSTO and use that as a cut (smooth below the MSTO not above)
+        for lineID in range(n_expected_lines):
+            lines[gmmMags > 18, lineID] = savgol_filter(lines[gmmMags > 18, lineID], 20, 2)
 
     return fiducial

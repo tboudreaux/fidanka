@@ -144,3 +144,75 @@ def GMM_component_measurment(xB, yB, n=50):
 
     gmm_means = np.squeeze(gmm_means)
     return gmm_means
+
+def median_ridge_line_estimate(color,
+                               mag,
+                               density,
+                               binSize=0.3,
+                               percLow=0.01,
+                               percHigh=0.99,
+                               binSize='adaptive',
+                               max_Num_bin = False,
+                               binSize_min=0.1,
+                               sigmaCut = 3,
+                               cleaningIterations=10,
+                               components=100):
+
+    ridgeLine = np.zeros(shape=(4,binsLeft.shape[0]))
+
+    density = normalize_density_magBin(color, mag, density, binSize=binSize)
+    colorBins, magBins, densityBins = bin_color_mag_density(
+            color,
+            mag,
+            density,
+            percLow,
+            percHigh,
+            binSize,
+            max_Num_bin,
+            binSize_min)
+    colorBins, magBins, densityBins = clean_bins(
+            colorBins,
+            magBins,
+            densityBins,
+            sigma=sigmaCut,
+            iteration=cleaningIterations
+            )
+
+    gmm_means = GMM_component_measurment(colorBins, densityBins,n=components)
+    color = np.median(gmm_means, axis=1)
+    mag = np.array([np.mean(x) for x in magBins])
+
+    lowPercentile = np.percentile(gmm_means, 68.97, axis=1)
+    highPercentile = np.percentile(gmm_means, 100-68.97, axis=1)
+
+    ridgeLine[:,0] = color
+    ridgeLine[:,1] = mag
+    ridgeLine[:,2] = lowPercentile
+    ridgeLine[:,3] = highPercentile
+
+    return ridgeLine
+
+def percentile_range(
+        X : Union[FARRAY_1D, pd.Series],
+        percLow : float,
+        percHigh : float
+        ) -> Tuple[float, float]:
+    """
+    Extract ranges from an array based on requested percentiles
+
+    Parameters
+    ----------
+        X : Union[ndarray[float64], pd.Series]
+            Array to extract range from
+        percLow : float
+            Lower bound percentile to base range on
+        percHigh : float
+            Upper bound percentile to base range on
+
+    Returns
+    -------
+        xRange : Tuple[float, float]
+            range of X between its percLow and percHigh percentiles.
+    """
+    xRange = (np.percentile(X, percLow), np.percentile(X, percHigh))
+    return xRange
