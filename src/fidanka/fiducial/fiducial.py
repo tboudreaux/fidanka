@@ -17,6 +17,8 @@ from scipy.interpolate import splrep, BSpline, interp1d
 from scipy.spatial._qhull import ConvexHull as ConvexHullType
 from scipy.stats import norm
 
+from sklearn.mixture import GaussianMixture
+
 from tqdm import tqdm
 
 import warnings
@@ -24,6 +26,7 @@ import hashlib
 
 import logging
 import sys
+from functools import reduce
 
 IARRAY_1D = npt.NDArray[np.int32]
 
@@ -847,15 +850,44 @@ def waveform_collapse_peak_extraction(
     peakList = list()
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(1,1,figsize=(10,7))
-    for color, density, mag in zip(colorBins, densityBins, magBins):
+    for idx, (color, density, mag) in enumerate(zip(colorBins, densityBins, magBins)):
         peaks, _ = find_peaks(density)
         if len(peaks) == 0:
             peakList.append(np.array([]))
         else:
             peakList.append(color[peaks])
-            ax.plot(color[peaks], np.ones_like(color[peaks])*mag, 'o')
+            # ax.plot(color[peaks], np.ones_like(color[peaks])*mag, 'o')
+    sbID, startingBin = max(enumerate(peakList), key=lambda x: len(x[1]))
+
+    # Start by iterating upward
+    for ID, (mag, peaks) in enumerate(zip(magBins[sbID:], peakList[sbID:])):
+        if len(peaks) == 0:
+            continue
+        else:
+            dY = (1+ID)*mag
+            dX = peaks - startingBin
+            theta = np.arctan2(dY, dX)
+            ax.hist(theta)
+            plt.show()
+            exit()
+    print(sbID)
+    totalValidPaths = reduce(lambda a, b: a*b, [len(p) for p in peakList])
+    print(f"Total valid paths: {totalValidPaths:0.3E}")
     plt.show()
     exit()
+
+def gaussian_mixture_modeling_peak_extraction(
+        colorBins,
+        densityBins,
+        magBins,
+        nPopulations = 2
+        ) -> Tuple[float, float, float]:
+    """
+    Measure the peak density of a density vs. color distribution using a
+    gaussian mixture model. This algorithm is based on the assumption that
+    the color-density profile in each magnitude bin can be modeled by nPopulations
+    gaussian distributions.
+    """
 
 
 def spline_based_density_peak_extraction(
@@ -999,6 +1031,7 @@ def verticalize_CMD(
         percHigh : float = 99,
         binSize : float = 0.1,
         allowMax : bool = False,
+        methpd="GMM",
         ) -> Tuple[FARRAY_1D, Callable]:
     """
     Given some CMD fit an approximate fiducual line and use that to verticalize
@@ -1021,6 +1054,9 @@ def verticalize_CMD(
             value in the color distribution to be used as a fiducial point if
             the gaussian fitting fails. If false and if the gaussian curve fit
             failes then a nan will be used.
+        method : str, default="GMM"
+            Method to use to calculate the fiducial line. Options are "GMM"
+            for gaussian mixture model or "Ridge" for ridge bounding.
 
     Returns
     -------
@@ -1032,6 +1068,7 @@ def verticalize_CMD(
             of magnitude (so as to make it a one-to-one function)
 
     """
+    assert method in ["GMM", "Ridge"], "method must be either 'GMM' or 'Ridge'"
     ff = approximate_fiducial_line_function(color, mag, percLow=percLow, percHigh=percHigh, binSize=binSize, allowMax=allowMax)
     vColor = color - ff(mag)
     return vColor, ff
@@ -1182,16 +1219,7 @@ def fiducial_line(
 
     binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize)
 
-    # import matplotlib.pyplot as plt
-    # fig, axs = plt.subplots(1,2)
-    #
     vColor, ff = verticalize_CMD(color, mag, percLow, percHigh, appxBinSize, allowMax=allowMax)
-    # axs[0].scatter(vColor, mag, s=1)
-    #
-    # axs[1].scatter(color, mag, s=1)
-    # axs[0].invert_yaxis()
-    # axs[1].invert_yaxis()
-    # plt.show()
 
     if cacheDensity and os.path.exists(cacheDensityName):
         logger.info("Using cached density...")
