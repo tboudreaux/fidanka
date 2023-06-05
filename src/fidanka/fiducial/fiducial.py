@@ -148,6 +148,8 @@ def ridge_bounding(
     # return ridgeLine[:, 1:-1]
     return ridgeLine[:, :]
 
+def median_ridge_line_estimate()
+
 def instantaious_hull_density_cpp(
         r0: R2_VECTOR,
         ri: FARRAY_2D_2C,
@@ -1056,8 +1058,10 @@ def approximate_fiducial_line_function(
             Lower bound percentile to base range on
         percHigh : float, default=99
             Upper bound percentile to base range on
-        binSize : float
-            Spacing between each left bin edge to each right bin edge
+        binSize : Union[str, float], default='adaptive'
+            Spacing between each left bin edge to each right bin edge. Default
+            is 'adaptive' which will generate bins adaptivly in order to
+            maintain uniform counting statistics.
         allowMax : bool, default=False
             If true then the ridge bounding algorithm will allow the maximum
             value in the color distribution to be used as a fiducial point if
