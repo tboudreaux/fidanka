@@ -1,9 +1,9 @@
-from fidanka.fiducial.utils import perentile_range, ridge_bounding
+from fidanka.fiducial.utils import percentile_range, median_ridge_line_estimate
 
 import emcee
 from multiprocessing import Pool
 
-def plm(color, mag, piecewise_linear, binsLeft, binsRight, i)
+def plm(color, mag, piecewise_linear, binsLeft, binsRight, i):
     fiducial=np.zeros(shape=(binsLeft.shape[0],5))
     masks = [((mag >= binsLeft[i]) & (mag < binsRight[i])) for i in range(len(binsLeft))]
     binned_mag = [mag[mask] for mask in masks]
@@ -12,7 +12,7 @@ def plm(color, mag, piecewise_linear, binsLeft, binsRight, i)
     colorRight = [max(binned_color[i]) for i in range(len(binned_color))]
     color_error = np.sqrt(error1**2 + error2**2)
     binned_color_error = [color_error[mask] for mask in masks]
-    cbin, m, _, _ = ridge_bounding(color, mag, binsLeft, binsRight, allowMax=allowMax)
+    cbin, m, _, _ = median_ridge_line_estimate(color, mag, binsLeft, binsRight, allowMax=allowMax)
     nwalkers = piecewise_linear[0]
     theta = np.concatenate((cbin,m))
     theta = np.tile(theta,(nwalkers,1))

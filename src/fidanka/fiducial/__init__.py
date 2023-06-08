@@ -1,1 +1,2 @@
-from .fiducial import fiducial_line
+from .fiducial import measure_fiducial_lines
+from .fiducialLine import fiducial_line

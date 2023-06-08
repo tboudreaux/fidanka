@@ -4,7 +4,9 @@ from fidanka.fiducial.utils import clean_bins, normalize_density_magBin
 from fidanka.fiducial.utils import GMM_component_measurment
 from fidanka.fiducial.utils import median_ridge_line_estimate
 from fidanka.fiducial.utils import percentile_range
+from fidanka.fiducial.utils import mag_bins, bin_color_mag_density
 from fidanka.fiducial.methods import plm
+from fidanka.fiducial.fiducialLine import fiducial_line
 
 import numpy as np
 import pandas as pd
@@ -567,131 +569,6 @@ def get_mag_and_color_ranges(
     magRange = percentile_range(mag, percLow, percHigh)
     return colorRange, magRange
 
-def bin_color_mag_density(
-        color : FARRAY_1D,
-        mag : FARRAY_1D,
-        density : FARRAY_1D,
-        percLow : float,
-        percHigh : float,
-        binSize : Union[str, float],
-        max_Num_bin : Union[bool, int] = False,
-        binSize_min : float = 0.1,
-        ) -> Tuple[FARRAY_1D, FARRAY_1D, FARRAY_1D]:
-    """
-    Use the bin edges from mag_bins to split the color, mag, and density arrays
-    into lists of arrays.
-
-    Parameters
-    ----------
-        color : np.ndarray[float64]
-            1D array of color of shape m for the stars in the CMD
-        mag : np.ndarray[float64]
-            1D array of magnitude of shape m for the stars in the CMD
-        density : np.ndarray[float64]
-            1D array of density of shape m for the stars in the CMD
-        percLow : float
-            Lower bound percentile to base range on
-        percHigh : float
-            Upper bound percentile to base range on
-        binSize : Union[str, float]
-            Size of the bins to use. If 'adaptive' will attempt to keep
-            counting statistics the same throughout.
-        max_Num_bin : Union[bool, int]
-            False or `0` will not limit the number of bins. Any other integer
-            will limit the number of bins to that number.
-        binSize_min : float
-            Minimum bin size to use when using adaptive binning
-
-    Returns
-    -------
-        colorBins : List[np.ndarray[float64]]
-            List of arrays of color of shape m for the stars in the CMD
-        magBins : List[np.ndarray[float64]]
-            List of arrays of magnitude of shape m for the stars in the CMD
-        densityBins : List[np.ndarray[float64]]
-            List of arrays of density of shape m for the stars in the CMD
-    """
-    if max_Num_bin == 0:
-        max_Num_bin = False
-    left, right = mag_bins(
-            mag,
-            percHigh,
-            percLow,
-            binSize,
-            max_Num_bin=max_Num_bin,
-            binSize_min=binSize_min)
-
-    colorBins = list()
-    magBins = list()
-    densityBins = list()
-    for l, r in zip(left, right):
-        condition = (m >= left) & (m < right)
-        colorBins.append(color[condition])
-        magBins.append(mag[condition])
-        densityBins.append(density[condition])
-    return colorBins, magBins, densityBins
-
-def mag_bins(
-        mag : Union[FARRAY_1D, pd.Series],
-        percHigh : float,
-        percLow : float,
-        binSize : Union[str, float],
-        max_Num_bin: Union[bool, int] = False,
-        binSize_min: float = 0.1,
-        ) -> Tuple[FARRAY_1D, FARRAY_1D]:
-    """
-    Find the left and right edges of bins in magnitude space between magnitudes
-    percLow and percHigh percentiles with a bin size of binSize. Find suitable
-    binsize if choose to use adapative bin size
-
-    Parameters
-    ----------
-        mag : Union[ndarray[float64], pd.Series]
-            1D array of magnitude of shape m
-        percLow : float
-            Lower bound percentile to base range on
-        percHigh : float
-            Upper bound percentile to base range on
-        binSize : Union[str, float]
-            Spacing between each left bin edge to each right bin edge
-        max_Num_bin: Union[str, int]
-            maximum number of bins
-
-    Returns
-    -------
-        binsLeft : ndarray[float64]
-            left edges of bins in magnitude space
-        binsRight : ndarray[float64]
-            right edges of bins in magnitude space
-    """
-    magRange = percentile_range(mag, percLow, percHigh)
-    if binSize == 'adaptive':
-        len_mag = len(mag)
-        if max_Num_bin == False:
-            Bin_count_wanted = 50
-        else:
-            Bin_count_wanted = np.max((int(np.ceil(len_mag // max_Num_bin)),50))
-
-        mag_sort = np.sort(mag)
-        binsLeft = [mag_sort[0]]
-        binsRight = []
-        i = 0
-        i_left = 0
-        while i < len_mag:
-            if mag_sort[i] - binsLeft[-1] < binSize_min:
-                i += 1
-            else:
-                if i - i_left >= Bin_count_wanted:
-                    binsRight.append(mag_sort[i])
-                    binsLeft.append(mag_sort[i])
-                    i_left = i
-                i += 1
-        binsLeft = np.array(binsLeft[:-1])
-        binsRight = np.append(np.array(binsRight[:-1]), mag_sort[-1]+0.001)
-    else:
-        binsLeft = np.arange(magRange[1], magRange[0], binSize)
-        binsRight = binsLeft + binSize
-    return binsLeft, binsRight
 
 def density_color_cut(
         density : FARRAY_1D,
@@ -1050,9 +927,10 @@ def spline_based_density_peak_extraction(
 def approximate_fiducial_line_function(
         color : FARRAY_1D,
         mag : FARRAY_1D,
+        density : FARRAY_1D,
         binSize : Union[str, float],
-        percLow : float = 1,
-        percHigh : float = 99,
+        percLow : float = 100-68.97,
+        percHigh : float = 68.97,
         allowMax : bool = False,
         ) -> Callable:
     """
@@ -1065,19 +943,22 @@ def approximate_fiducial_line_function(
             Color of each target in a CMD of shape m.
         mag : ndarray[float64]
             Magnitude of each target in a CMD of shape m.
-        percLow : float, default=1
-            Lower bound percentile to base range on
-        percHigh : float, default=99
-            Upper bound percentile to base range on
+        density : ndarray[float64]
+            Density at each point in a CMD of shape m.
         binSize : Union[str, float], default='adaptive'
             Spacing between each left bin edge to each right bin edge. Default
             is 'adaptive' which will generate bins adaptivly in order to
             maintain uniform counting statistics.
+        percLow : float, default=1
+            Lower bound percentile to base range on
+        percHigh : float, default=99
+            Upper bound percentile to base range on
         allowMax : bool, default=False
             If true then the ridge bounding algorithm will allow the maximum
             value in the color distribution to be used as a fiducial point if
             the gaussian fitting fails. If false and if the gaussian curve fit
-            failes then a nan will be used.
+            failes then a nan will be used. (depricated, will be removed in
+            a latter version)
 
     Returns
     -------
@@ -1087,14 +968,19 @@ def approximate_fiducial_line_function(
             of magnitude (so as to make it a one-to-one function)
 
     """
-    binsLeft, binsRight = mag_bins(mag, percLow, percHigh, binSize)
-    fiducialLine = median_ridge_line_estimate(color, mag, binsLeft, binsRight, allowMax=allowMax)
+    fiducialLine = median_ridge_line_estimate(
+            color,
+            mag,
+            density,
+            binSize=binSize
+            )
     ff = interp1d(fiducialLine[1], fiducialLine[0], bounds_error=False, fill_value='extrapolate')
     return ff
 
 def verticalize_CMD(
         color : FARRAY_1D,
         mag : FARRAY_1D,
+        density : FARRAY_1D,
         binSize : Union[str, float],
         percLow : float = 1,
         percHigh : float = 99,
@@ -1110,17 +996,22 @@ def verticalize_CMD(
             Color of each target in a CMD of shape m.
         mag : ndarray[float64]
             Magnitude of each target in a CMD of shape m.
+        density : ndarray[float64]
+            Density at each point in a CMD of shape m.
+        binSize : Union[str, float], default='adaptive'
+            Spacing between each left bin edge to each right bin edge. Default
+            is 'adaptive' which will generate bins adaptivly in order to
+            maintain uniform counting statistics.
         percLow : float, default=1
             Lower bound percentile to base range on
         percHigh : float, default=99
             Upper bound percentile to base range on
-        binSize : float
-            Spacing between each left bin edge to each right bin edge
         allowMax : bool, default=False
             If true then the ridge bounding algorithm will allow the maximum
             value in the color distribution to be used as a fiducial point if
             the gaussian fitting fails. If false and if the gaussian curve fit
-            failes then a nan will be used.
+            failes then a nan will be used. (depricated, will be removed in a 
+            future version)
 
     Returns
     -------
@@ -1132,7 +1023,14 @@ def verticalize_CMD(
             of magnitude (so as to make it a one-to-one function)
 
     """
-    ff = approximate_fiducial_line_function(color, mag, percLow=percLow, percHigh=percHigh, binSize=binSize, allowMax=allowMax)
+    ff = approximate_fiducial_line_function(
+            color,
+            mag,
+            density,
+            percLow=percLow,
+            percHigh=percHigh,
+            binSize=binSize
+            )
     vColor = color - ff(mag)
     return vColor, ff
 
@@ -1276,9 +1174,39 @@ def log_probability(
         return -np.inf
     return lp + log_likelihood(theta, binned_color, binned_mag, binned_color_err)
 
+def load_density(
+        cacheDensity : bool,
+        cacheDensityName : str,
+        filter1 : FARRAY_1D,
+        filter2 : FARRAY_1D,
+        error1 : FARRAY_1D,
+        error2 : FARRAY_1D,
+        reverseFilterOrder : bool,
+        convexHullPoints : int,
+        ) -> FARRAY_1D:
+    if cacheDensity and os.path.exists(cacheDensityName):
+        loaded = np.load(cacheDensityName)
+        density = loaded["density"]
+        mcrunsLoaded = loaded["mcruns"]
+    else:
+        density = MC_convex_hull_density_approximation(
+                filter1,
+                filter2,
+                error1,
+                error2,
+                reverseFilterOrder,
+                convexHullPoints=convexHullPoints,
+                mcruns=1,
+                pbar=True
+                )
+        if cacheDensity:
+            with open(cacheDensityName, 'wb') as f:
+                np.savez(f , density=density, mcruns=1)
+    return density
 
 
-def fiducial_line(
+
+def measure_fiducial_lines(
         filter1 : Union[FARRAY_1D, pd.Series],
         filter2 : Union[FARRAY_1D, pd.Series],
         error1 : Union[FARRAY_1D, pd.Series],
@@ -1286,7 +1214,7 @@ def fiducial_line(
         reverseFilterOrder : bool = False,
         mcruns : int = 10,
         convexHullPoints : int = 100,
-        binSize : Union[str, float] = 'adaptive',
+        binSize : Union[str, float] = 'uniformCS',
         percLow : float = 1,
         percHigh : float = 99,
         splineSmoothMin : float = 0.1,
@@ -1303,6 +1231,7 @@ def fiducial_line(
         uni_density: bool = False,
         binSize_min: float = 0.1,
         piecewise_linear: Union[bool,FARRAY_1D] = False,
+        nPops : int = 2,
         ) -> FARRAY_2D_2C:
     """
 
@@ -1397,6 +1326,8 @@ def fiducial_line(
             best-fit piecewise linear function for the data. Can be turned on when Hull
             density method struggles in the low density region. Takes [nwalkers, iter] if
             not set as False
+        nPops : int, default=2
+            Number of populations to fit using the gaussian mixture modeling method.
 
     Returns
     -------
@@ -1422,9 +1353,19 @@ def fiducial_line(
     warnings.showwarning = warning_traceback
 
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
-    vColor, ff = verticalize_CMD(color, mag, percLow, percHigh, appxBinSize, allowMax=allowMax)
+    density = load_density(
+        cacheDensity,
+        cacheDensityName,
+        filter1,
+        filter2,
+        error1,
+        error2,
+        reverseFilterOrder,
+        convexHullPoints,
+        )
+    density = normalize_density_magBin(color, mag, density, binSize=0.3)
+    vColor, ff = verticalize_CMD(color, mag, density, 'uniformCS', percLow, percHigh)
 
-    fiducial=np.zeros(shape=(binsLeft.shape[0],5))
     logger.info("Fitting fiducial line to density...")
     if piecewise_linear != False:
         binsLeft, binsRight = mag_bins(
@@ -1435,63 +1376,65 @@ def fiducial_line(
                 binSize_min = binSize_min
                 )
         # TODO Figure out what i should be here? Should this be in a loop?
-        plm(color, mag, piecewise_linear, binsLeft, binsRight, 0)
+        fiducial = plm(color, mag, piecewise_linear, binsLeft, binsRight, 0)
     else:
-        if cacheDensity and os.path.exists(cacheDensityName):
-            logger.info("Using cached density...")
-            loaded = np.load(cacheDensityName)
-            density = loaded["density"]
-            mcrunsLoaded = loaded["mcruns"]
-            if mcrunsLoaded != mcruns:
-                logger.debug(f"mcrunsLoaded: {mcrunsLoaded}")
-                raise ValueError(f"mcruns does not match cached value! "
-                                 f"({mcruns} != {mcrunsLoaded})")
-        density = MC_convex_hull_density_approximation(
-                filter1,
-                filter2,
-                error1,
-                error2,
-                reverseFilterOrder,
-                convexHullPoints=convexHullPoints,
-                mcruns=mcruns,
-                pbar=pbar,
-                )
-        if cacheDensity:
-            with open(cacheDensityName, 'wb') as f:
-                np.savez(f , density=density, mcruns=mcruns)
         # TODO finish implimenting the helper functions here, should be easy
         # The biggest thing will be thinking about the datascrutrure. We need
         # Some way of representing an arbitrary number of fiducial lines
 
         # I think an fiducual object might be warrented. We could then return
         # a list of these. Each with helpful information about errors and whatnot
-        
-
         # Basic implintation (without thinking about datastructure will look like)
-        vColorBins, vMagBins, vDensityBins = bin_color_mag_density(
-                vColor.values,
-                vMag.values,
-                vDensity)
-        vColorBins, vMagBins, vDensityBins = clean_bins(
-                vColorBins,
-                vMagBins,
-                vDensityBins,
-                sigma=3,
-                iterations=5)
 
         # TODO define what n_expected_lines is 
         # TODO should there be an automated way to guess this?
-        gmm_vert_means = GMM_component_measurment(
-                vColorBins,
-                vDensityBins,
-                n=n_expected_lines)
+        baseSampling = np.random.default_rng().normal(size=(mcruns, 2, error1.shape[0]))
+        lines = [fiducial_line(i) for i in range(nPops)]
+        for iRun, bs in tqdm(enumerate(baseSampling), total=mcruns):
+            f1s = shift_photometry_by_error(filter1, error1, bs[0])
+            f2s = shift_photometry_by_error(filter2, error2, bs[1])
+            color, mag = color_mag_from_filters(f1s, f2s, reverseFilterOrder)
+            density = load_density(
+                cacheDensity,
+                cacheDensityName,
+                f1s,
+                f2s,
+                error1,
+                error2,
+                reverseFilterOrder,
+                convexHullPoints,
+                )
+            density = normalize_density_magBin(color, mag, density, binSize=0.3, pbar=False)
+            vColor, ff = verticalize_CMD(color, mag, density, 'uniformCS', percLow, percHigh)
+            vColorBins, vMagBins, vDensityBins = bin_color_mag_density(
+                    vColor,
+                    mag,
+                    density)
+            vColorBins, vMagBins, vDensityBins = clean_bins(
+                    vColorBins,
+                    vMagBins,
+                    vDensityBins,
+                    sigma=3,
+                    iterations=5)
+            gmm_vert_means = GMM_component_measurment(
+                    vColorBins,
+                    vDensityBins,
+                    n=nPops)
+            # gmmVertMeansMC.append(gmm_vert_means)
+            vMagBinMeans = np.array([np.mean(x) for x in vMagBins])
+            for idx, cs in enumerate(gmm_vert_means):
+                sid = np.argsort(cs)
+                gmm_vert_means[idx] = cs[sid]
+            for idx, fLine in enumerate(gmm_vert_means.T):
+                lines[idx].add_measurement(fLine + ff(vMagBinMeans), vMagBinMeans)
+        return lines
 
-        lines = np.zeros(shape=(len(gmmMags),n_expected_lines))
-        for idx, (cs, m) in enumerate(zip(gmm_vert_means, gmmMags)):
-            lines[idx] = cs[np.argsort(cs)]
-
-        # TODO Auto identify the MSTO and use that as a cut (smooth below the MSTO not above)
-        for lineID in range(n_expected_lines):
-            lines[gmmMags > 18, lineID] = savgol_filter(lines[gmmMags > 18, lineID], 20, 2)
-
-    return fiducial
+    #     lines = np.zeros(shape=(len(gmmMags),n_expected_lines))
+    #     for idx, (cs, m) in enumerate(zip(gmm_vert_means, gmmMags)):
+    #         lines[idx] = cs[np.argsort(cs)]
+    #
+    #     # TODO Auto identify the MSTO and use that as a cut (smooth below the MSTO not above)
+    #     for lineID in range(n_expected_lines):
+    #         lines[gmmMags > 18, lineID] = savgol_filter(lines[gmmMags > 18, lineID], 20, 2)
+    #
+    # return fiducial
