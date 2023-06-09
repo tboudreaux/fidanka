@@ -1232,6 +1232,7 @@ def measure_fiducial_lines(
         binSize_min: float = 0.1,
         piecewise_linear: Union[bool,FARRAY_1D] = False,
         nPops : int = 2,
+        targetStat : int = 250,
         ) -> FARRAY_2D_2C:
     """
 
@@ -1328,6 +1329,8 @@ def measure_fiducial_lines(
             not set as False
         nPops : int, default=2
             Number of populations to fit using the gaussian mixture modeling method.
+        targetStat : int, default=250
+            Number of points per bin to aim to when using uniformCS binning algorithm
 
     Returns
     -------
@@ -1409,7 +1412,8 @@ def measure_fiducial_lines(
             vColorBins, vMagBins, vDensityBins = bin_color_mag_density(
                     vColor,
                     mag,
-                    density)
+                    density,
+                    targetStat=targetStat)
             vColorBins, vMagBins, vDensityBins = clean_bins(
                     vColorBins,
                     vMagBins,
