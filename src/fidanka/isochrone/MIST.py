@@ -42,6 +42,7 @@ def read_iso(
 
         assert isinstance(df, pd.DataFrame)
         age = 10**df['log10_isochrone_age_yr'].iloc[0]
+        df['age'] = 10**df['log10_isochrone_age_yr']
         isos[age] = df
     return isos
 

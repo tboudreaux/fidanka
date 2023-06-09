@@ -245,7 +245,7 @@ def interCMDatMag(
 
 def interp_isochrone_age(
         iso : dict[float, pd.DataFrame],
-        targetAge : float
+        targetAgeGyr : float
         ) -> pd.DataFrame:
     """
     Given some dictionary of isochrones where the keys are the ages of those
@@ -258,8 +258,8 @@ def interp_isochrone_age(
     ----------
         iso : dict[float, pd.DataFrame]
             Dictionary of isochrones indexed by isochrones age in Gyr
-        targetAge : float
-            Target age to interpolate to. This age must be greater than the
+        targetAgeGyr : float
+            Target age to interpolate to (in Gyr). This age must be greater than the
             minimum age and less than the max age in iso.
 
     Returns
@@ -268,9 +268,9 @@ def interp_isochrone_age(
             Isochrones with all columns and rows interpolated to the targetAge
             linearlly from the upper and lower bounding aged isochrones
     """
-    logTargetAgeYr= np.log10(targetAge*1e9)
+    targetAgeYr= targetAgeGyr*1e9
     ageKeys = list(iso.keys())
-    distance = [(x-logTargetAgeYr, x) for x in ageKeys]
+    distance = [(x-targetAgeYr, x) for x in ageKeys]
     below = sorted(filter(lambda x: x[0] <=0, distance), key=lambda x: abs(x[0]))
     above = sorted(filter(lambda x: x[0] > 0, distance), key=lambda x: x[0])
     isoBelow = iso[below[0][1]]
@@ -284,14 +284,14 @@ def interp_isochrone_age(
 
     age1 = isoBelow['log10_isochrone_age_yr'].iloc[0]
     age2 = isoAbove['log10_isochrone_age_yr'].iloc[0]
+    logTargetAgeYr = np.log10(targetAgeYr)
 
     def linearinterpolate(x, other, age1, age2):
         newIso = ((other[x.name] - x)/(age2-age1)) * (logTargetAgeYr - age1) + x
         return newIso
-
     interpolated = isoBelow.apply(lambda x: linearinterpolate(x, isoAbove, age1, age2))
+    interpolated = interpolated.dropna()
 
-    assert isinstance(interpolated, pd.DataFrame)
     return interpolated
 
 def iso_color_mag(iso, filter1, filter2, reverseFilterOrder : bool = False):

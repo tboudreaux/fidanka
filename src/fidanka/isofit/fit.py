@@ -1,6 +1,8 @@
 from fidanka.isochrone.isochrone import shift_isochrone
 from fidanka.isochrone.isochrone import interp_isochrone_age
+from fidanka.isochrone.MIST import read_iso_metadata
 from fidanka.fiducial.fiducial import fiducial_line
+from fidanka.bolometric.bctab import BolometricCorrector
 
 import numpy as np
 import pandas as pd
@@ -91,6 +93,7 @@ def get_synthPop_chi2(
 def get_ISO_CMD_Chi2(
         iso : pd.DataFrame,
         fiducialLine : FARRAY_2D_2C ,
+        bc : BolometricCorrector,
         filters : Tuple[str, str, str] = ("F606W", "F814W", "F606W"),
         distance : float = 0,
         Av : float = 0,
@@ -135,21 +138,20 @@ def get_ISO_CMD_Chi2(
     isoFilter2Name = f"WFC3_UVIS_{filters[1]}_MAG"
     isoFilter3Name = f"WFC3_UVIS_{filters[2]}_MAG"
 
-    isoColor = iso[isoFilter1Name] - iso[isoFilter2Name]
-    isoMag = iso[isoFilter3Name]
 
-    assert isoColor is not None
-    assert isoMag is not None
+    bolCorrected = bc.apparent_mags(
+            10**iso["log_Teff"],
+            iso["log_g"],
+            iso["log_L"],
+            Av=Av,
+            mu=distance)
 
-    assert isinstance(isoMag, pd.Series)
-    assert isinstance(isoColor, pd.Series)
-
-
-    isoAptMag, isoAptColor = shift_isochrone(isoColor, isoMag, distance, Av)
+    isoColor = bolCorrected[isoFilter1Name] - bolCorrected[isoFilter2Name]
+    isoMag = bolCorrected[isoFilter3Name]
 
     f = interp1d(
-            isoAptMag,
-            isoAptColor,
+            isoMag,
+            isoColor,
             bounds_error=False,
             fill_value='extrapolate'
             )
@@ -177,7 +179,9 @@ def get_ISO_CMD_Chi2(
 def optimize(
         fiducial : FARRAY_2D_2C,
         isochrone : pd.DataFrame,
-        filters : Tuple[str, str, str]
+        filters : Tuple[str, str, str],
+        bolTables : List[str],
+        FeH : float
         ) -> CHI2R:
     """
     Run Chi2 optimization results on photometry and isochrone minimizing the
@@ -190,7 +194,7 @@ def optimize(
             Fiducual line in the format output by the fiducual function. Where
             fiducialLine[:, 0] are the colors of each fiducual point and
             fiducialLine[:, 1] are the magniudes of each fiducual point.
-        isochrone : pd.DataFrame
+        isochrone : dict[pd.DataFrame]
             The isochrone. If loaded and bolometrically corrected using pysep
             then this will be in the correct format. Otherwise make sure that 
             it includes filters called "WFC3_UVIS_filter[0..2]_MAG" which have
@@ -201,9 +205,11 @@ def optimize(
             names used to get the color and mag. The color is defined as 
             filter[0] - filter[1] and the mag is filter[2]
     """
+    bc = BolometricCorrector(bolTables, FeH)
     age_d_E_opt = lambda iso, age, d, E: get_ISO_CMD_Chi2(
             interp_isochrone_age(iso, age),
             fiducial,
+            bc,
             distance=d,
             Av=E,
             filters=filters)
@@ -214,9 +220,11 @@ def optimize(
             bounds=[
                 (5,20),
                 (5000, None),
-                (0,0.3)
+                (0.001,0.3)
                 ],
             )
+
+    print(f"Finished Optimizing: {optimized.success}, had {bc._cacheHits} and {bc._cacheMisses} cache hits and misses respectively")
 
     assert isinstance(optimized, OptimizeResult)
 

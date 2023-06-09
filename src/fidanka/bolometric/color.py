@@ -33,8 +33,31 @@ def _get_mags(Teff, logg, logL, table):
     magNames = map(lambda x: f"{x}_MAG", filterNames)
     magnitudes = dict()
     for magName, filterName in zip(magNames, filterNames):
-        interpFunc = LinearNDInterpolator(list(zip(table["Teff"], table["logg"])), table[filterName])
-        magnitudes[magName] = SOLBOL-2.5*logL - interpFunc(Teff, logg)
+        tabTeff = table["Teff"].values
+        tabLogg = table["logg"].values
+        tabMag = table[filterName].values
+
+        TMask, gMask, tabMask = np.isnan(tabTeff), np.isnan(tabLogg), np.isnan(tabMag)
+        imask = np.logical_or(TMask, gMask, tabMask)
+        mask = np.logical_not(imask)
+
+        tabTeff, tabLogg, tabMag = tabTeff[mask], tabLogg[mask], tabMag[mask]
+
+        i, o = np.vstack((tabTeff, tabLogg)).T, tabMag
+        o = tabMag
+
+        try:
+            interpFunc = LinearNDInterpolator(i, o)
+            magnitudes[magName] = SOLBOL-2.5*logL - interpFunc(Teff, logg)
+        except Exception as e:
+            print(mask)
+            print(tabTeff, tabLogg, tabMag)
+            print(table["Teff"].values)
+            print(table["logg"].values)
+            print(i.shape, o.shape, mask.shape)
+            print(set(mask))
+            print(e)
+            exit()
     return magnitudes
 
 

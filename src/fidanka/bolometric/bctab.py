@@ -7,6 +7,8 @@ import os
 import numpy as np
 import pandas as pd
 
+from hashlib import sha256
+
 RKE = re.compile(r"Av=(\d+\.\d+):Rv=(\d+\.\d+)")
 
 class BolometricCorrector:
@@ -14,6 +16,7 @@ class BolometricCorrector:
         self.paths = paths
         self.tables = dict()
         self.tableFeHs = np.empty(len(paths))
+        self.FeH = FeH
         for idx, path in enumerate(paths):
             tabFeH = re.search("feh([mp]\d+)", path).group(1)
             if tabFeH[0] == 'm':
@@ -38,6 +41,17 @@ class BolometricCorrector:
 
         self.upperBCTable = load_bol_table(upperBCTablePath)
         self.lowerBCTable = load_bol_table(lowerBCTablePath)
+        self.header = self.upperBCTable[list(self.upperBCTable.keys())[0]].columns
+
+        self.BCTabs = dict()
+        for (lKey, lower), (uKey, upper) in zip(self.lowerBCTable.items(), self.upperBCTable.items()):
+            self.BCTabs[lKey] = interpolate_arrays(
+                    lower,
+                    upper,
+                    self.FeH,
+                    self.FeHBounds[0],
+                    self.FeHBounds[1]
+                    )
 
         self.Av = np.empty(len(self.upperBCTable))
         self.Rv = np.empty(len(self.upperBCTable))
@@ -47,11 +61,16 @@ class BolometricCorrector:
             self.Rv[idx] = reddeningKey[1]
             self.keys.append(reddeningKey)
 
-
-        # BC = interpolate_arrays(lowerBCTable.values(), upperBCTable.values(), FeH, closestFeHBelow, closestFeHAbove)
-        # self.BC = pd.DataFrame(data=BC, columns=upperBCTable.columns)
-
-        self.FeH = FeH
+        self._cache ={
+                'AvCorrectUpperTable' : None,
+                'AvCorrectLowerTable' : None,
+                'targetBC' : None,
+                'dustCorrectedMags' : None,
+                'dustDistCorectedMags' : None
+                }
+        self._cacheHash = None
+        self._cacheHits = 0
+        self._cacheMisses = 0
 
     def get_Av_correct_tables(self, table, Av, Rv=3.1):
         lowerAv, upperAv = closest(self.Av, Av)
@@ -69,28 +88,66 @@ class BolometricCorrector:
         upperKey = (upperAv, Rv)
         lowerTable = table[lowerKey]
         upperTable = table[upperKey]
-        interpolatedTable = interpolate_arrays(lowerTable.values, upperTable.values, Av, lowerAv, upperAv)
+        interpolatedTable = interpolate_arrays(
+                lowerTable.values,
+                upperTable.values,
+                Av,
+                lowerAv,
+                upperAv
+                )
         interpolatedTable = pd.DataFrame(data=interpolatedTable, columns=upperTable.columns)
         return interpolatedTable
+
+    def _check_cache(self, Av, Rv):
+        cacheHash = sha256(
+                np.array([Av, Rv]).tobytes()
+                ).hexdigest()
+        if cacheHash == self._cacheHash:
+            self._cacheHits += 1
+            return True
+        else:
+            self._cacheHash = cacheHash
+            self._cacheMisses += 1
+            return False
+
+    def _reset_cache(self):
+        self._cache = {
+                'targetBC' : None,
+                }
+        self._cacheHash = None
+
+    def _update_cache_hash(self, Av, Rv):
+        self._cacheHash = sha256(
+                np.array([Av, Rv]).tobytes()
+                ).hexdigest()
+
 
     def apparent_mags(self, Teff, logg, logL, Av=0, Rv=3.1, mu=0):
         # Get the Tables with the correct Av from the upper and lower bounding
         # metallicity tables
-        AvCorrectUpperTable = self.get_Av_correct_tables(self.upperBCTable, Av, Rv)
-        AvCorrectLowerTable = self.get_Av_correct_tables(self.lowerBCTable, Av, Rv)
-        header = AvCorrectUpperTable.columns
+        if self._check_cache(Av, Rv):
+            targetBC = self._cache['targetBC']
+        else:
+            self._reset_cache()
+            self._update_cache_hash(Av, Rv)
 
 
-        # Interpolate between the upper and lower bounding metallicity tables
-        # to get the BC for the target metallicity
-        targetBC = interpolate_arrays(
-                AvCorrectLowerTable.values,
-                AvCorrectUpperTable.values,
-                self.FeH,
-                self.FeHBounds[0],
-                self.FeHBounds[1]
-                )
-        targetBC = pd.DataFrame(data=targetBC, columns=header)
+            lowerAv, upperAv = closest(self.Av, Av)
+            upperKey, lowerKey = (upperAv, Rv), (lowerAv, Rv)
+            upperAvTab = self.BCTabs[upperKey]
+            lowerAvTab = self.BCTabs[lowerKey]
+
+            targetBC = interpolate_arrays(
+                    lowerAvTab,
+                    upperAvTab,
+                    Av,
+                    lowerAv,
+                    upperAv
+                    )
+
+            targetBC = pd.DataFrame(data=targetBC, columns=self.header)
+            self._cache['targetBC'] = targetBC
+
 
         # get the magnitudes corrected for interstellar reddening
         dustCorrectedMags = get_mags(Teff, logg, logL, targetBC)
@@ -100,6 +157,7 @@ class BolometricCorrector:
                 filterName : mag + mu
                 for filterName, mag in dustCorrectedMags.items()
                 }
+
 
         return pd.DataFrame(dustDistCorectedMags)
 
@@ -111,6 +169,10 @@ if __name__ == "__main__":
     root = "/home/tboudreaux/d/Astronomy/GraduateSchool/Thesis/GCConsistency/NGC2808/bolTables/HSTWFC3/"
     filenames = list(filter(lambda x: re.search("feh[mp]\d+", x), os.listdir(root)))
     paths = list(map(lambda x: os.path.join(root, x), filenames))
-    bol = Bolometric(paths, 1.0)
+    bol = BolometricCorrector(paths, 1.0)
 
-    print(bol.apparent_mags(5000, 2.0, 3.0, Av=0.156, mu=1))
+    Teff = np.array([5000])
+    logg = np.array([2.0])
+    logL = np.array([3.0])
+
+    print(bol.apparent_mags(Teff, logg, logL, Av=0.156, mu=1))
