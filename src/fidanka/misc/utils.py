@@ -225,7 +225,7 @@ def get_logger(name, fileName='fidanka.log', level=logging.INFO, flevel=logging.
 
     if not logger.hasHandlers():
         # create a file handler
-        file_handler = logging.FileHandler('fidanka.log')
+        file_handler = logging.FileHandler(fileName)
         file_handler.setLevel(flevel)
 
         console_handler = logging.StreamHandler()
