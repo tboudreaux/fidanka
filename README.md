@@ -1,7 +1,10 @@
 # Fidanka
+Fidanka is an (hopefully) easy to use python package for doing science with globular clusters.
+Written by Emily M. Boudreaux and Martin Ying.
 
-Routines for generating fiducual lines and fitting isochrones to those fiducual
-lines
+<p align="center">
+	<img width="460" height="460" src="/assets/fidankaLogo.png">
+</p>
 
 ## Docs
 API Docs can be found <a href="https://tboudreaux.github.io/fidanka/">here</a>
