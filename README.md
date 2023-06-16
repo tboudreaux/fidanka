@@ -4,7 +4,7 @@ Routines for generating fiducual lines and fitting isochrones to those fiducual
 lines
 
 ## Docs
-API Docs can be found <a href="https://algebrist.com/~tboudreaux/docs/fidanka">here</a>
+API Docs can be found <a href="https://tboudreaux.github.io/fidanka/">here</a>
 
 ## Install
 
