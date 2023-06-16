@@ -27,8 +27,8 @@ sys.path.insert(0, os.path.abspath(fidanka))
 # -- Project information -----------------------------------------------------
 
 project = 'fidanka'
-copyright = '2023, Thomas M. Boudreaux'
-author = 'Thomas M. Boudreaux'
+copyright = '2023, Emily M. Boudreaux'
+author = 'Emily M. Boudreaux & Martin Ying'
 
 # The full version, including alpha/beta/rc tags
 release = '0.5'
