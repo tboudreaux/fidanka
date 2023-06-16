@@ -1,6 +1,7 @@
 from fidanka.bolometric.load import load_bol_table, load_bol_table_metadata
 from fidanka.bolometric.color import get_mags
 from fidanka.misc.utils import closest, interpolate_arrays
+from fidanka.misc.utils import get_logger
 
 import re
 import os
@@ -14,11 +15,15 @@ RKE = re.compile(r"Av=(\d+\.\d+):Rv=(\d+\.\d+)")
 
 class BolometricCorrector:
     def __init__(self, paths, FeH, filters=["F606W", "F814W"]):
+        self.logger = get_logger("fidanka.bolometric.BolometricCorrector")
+
         self.filters = filters
         self.paths = paths
         self.tables = dict()
         self.tableFeHs = np.empty(len(paths))
         self.FeH = FeH
+
+        self.logger.info("Loading FeH Tables...")
         for idx, path in enumerate(paths):
             tabFeH = re.search(r"feh([mp]\d+)", path).group(1)
             if tabFeH[0] == 'm':
@@ -28,8 +33,12 @@ class BolometricCorrector:
             tabFehNS = tabFeH[1:]
             decimal = sign * float(f"{tabFehNS[0]}.{tabFehNS[1:]}")
             self.tableFeHs[idx] = decimal
+        self.logger.info("FeH tables loaded!")
+
         sortedPaths = [x for _,x in sorted(zip(self.tableFeHs, paths))]
         self.tableFeHs = np.sort(self.tableFeHs)
+
+        self.logger.info("Interperloating FeH Tables...")
         closestFeHBelow, closestFeHAbove = closest(self.tableFeHs, FeH)
         if closestFeHAbove == None:
             closestFeHAbove = self.tableFeHs[-1]
@@ -64,7 +73,9 @@ class BolometricCorrector:
                     self.FeHBounds[0],
                     self.FeHBounds[1]
                     )
+        self.logger.info("FeH Tables Interperolated!")
 
+        self.logger.info("Intializing Cache...")
         self.Av = np.empty(len(self.upperBCTable))
         self.Rv = np.empty(len(self.upperBCTable))
         self.keys = list()
@@ -83,6 +94,7 @@ class BolometricCorrector:
         self._cacheHash = None
         self._cacheHits = 0
         self._cacheMisses = 0
+        self.logger.info("Cache Initialized!")
 
     def _check_cache(self, Av, Rv):
         cacheHash = sha256(
@@ -140,17 +152,10 @@ class BolometricCorrector:
         try:
             dustCorrectedMags = get_mags(Teff, logg, logL, targetBC)
         except Exception as e:
-            print(f"Error in get_mags: {e}")
-            print(f"Av: {Av}, Rv: {Rv}")
-            print(f"targetBC: {targetBC}")
-            print(f"targetBC.columns: {targetBC.columns}")
-            print(f"targetBC.index: {targetBC.index}")
-            print(f"Teff: {Teff}, logg: {logg}, logL: {logL}")
-            print(f"self.header: {self.header}")
-            print(f"mu: {mu}")
-            print(f"self.FeH: {self.FeH}")
-            print(f"self.FeHBounds: {self.FeHBounds}")
-            print(f"self.Av: {self.Av}")
+            self.logger.error(f"Av: {Av}, Rv: {Rv}")
+            self.logger.error(f"mu: {mu}")
+            self.logger.error(f"self.FeH: {self.FeH}")
+            self.logger.error(f"self.FeHBounds: {self.FeHBounds}")
             raise e
 
         # get the magnitudes corrected for distance modulus

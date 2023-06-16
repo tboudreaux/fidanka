@@ -219,7 +219,7 @@ def interpolate_arrays(
 
     return interpolated_array
 
-def get_logger(name, level=logging.INFO, flevel=logging.INFO, clevel=logging.WARNING):
+def get_logger(name, fileName='fidanka.log', level=logging.INFO, flevel=logging.INFO, clevel=logging.WARNING):
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
@@ -239,4 +239,5 @@ def get_logger(name, level=logging.INFO, flevel=logging.INFO, clevel=logging.WAR
         logger.addHandler(console_handler)
 
     return logger
+
 
