@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fidanka package &mdash; fidanka 0.5 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="fidanka.bolometric package" href="fidanka.bolometric.html" />
+    <link rel="prev" title="Welcome to fidanka’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            fidanka
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Home</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.bolometric.html">fidanka.bolometric package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.exception.html">fidanka.exception package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.ext.html">fidanka.ext package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html">fidanka.fiducial package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isochrone.html">fidanka.isochrone package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isofit.html">fidanka.isofit package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.misc.html">fidanka.misc package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.warn.html">fidanka.warn package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-fidanka">Module contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka">Fidanka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#from-source">From Source</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#simple-examples">Simple Examples</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#single-isochrone-fitting">Single Isochrone Fitting</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.fiducial.html">Fiducial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.isochrone.html">Isochrone</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.isofit.html">Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.bolometric.html">Bolometric</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.exception.html">Exceptions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.warn.html">Warnings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.ext.html">C-Libs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.misc.html">Misc</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">fidanka</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">fidanka package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/fidanka.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fidanka-package">
+<h1>fidanka package<a class="headerlink" href="#fidanka-package" title="Permalink to this heading"></a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.bolometric.html">fidanka.bolometric package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.bolometric.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.bolometric.html#module-fidanka.bolometric.bctab">fidanka.bolometric.bctab module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.bctab.BolometricCorrector"><code class="docutils literal notranslate"><span class="pre">BolometricCorrector</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.bctab.BolometricCorrector.apparent_mags"><code class="docutils literal notranslate"><span class="pre">BolometricCorrector.apparent_mags()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.bolometric.html#module-fidanka.bolometric.color">fidanka.bolometric.color module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.color.get_interpolated_FeHTable"><code class="docutils literal notranslate"><span class="pre">get_interpolated_FeHTable()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.color.get_mags"><code class="docutils literal notranslate"><span class="pre">get_mags()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.bolometric.html#module-fidanka.bolometric.load">fidanka.bolometric.load module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.load.load_bol_table"><code class="docutils literal notranslate"><span class="pre">load_bol_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.load.load_bol_table_metadata"><code class="docutils literal notranslate"><span class="pre">load_bol_table_metadata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.load.load_sub_bol_table"><code class="docutils literal notranslate"><span class="pre">load_sub_bol_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.load.load_sub_table_metadata"><code class="docutils literal notranslate"><span class="pre">load_sub_table_metadata()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.bolometric.html#module-fidanka.bolometric">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.exception.html">fidanka.exception package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.exception.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.exception.html#module-fidanka.exception.exception">fidanka.exception.exception module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.exception.html#fidanka.exception.exception.shape_dimension_check"><code class="docutils literal notranslate"><span class="pre">shape_dimension_check()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.exception.html#module-fidanka.exception">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.ext.html">fidanka.ext package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.ext.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.ext.src.html">fidanka.ext.src package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.ext.src.html#module-fidanka.ext.src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.ext.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.ext.html#module-fidanka.ext.nearest_neighbors">fidanka.ext.nearest_neighbors module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.ext.html#fidanka.ext.nearest_neighbors.nearest_neighbors"><code class="docutils literal notranslate"><span class="pre">nearest_neighbors()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.ext.html#module-fidanka.ext">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.fiducial.html">fidanka.fiducial package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.fiducial.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.methods.html">fidanka.fiducial.methods package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.fiducial.methods.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.fiducial.methods.html#module-fidanka.fiducial.methods.mc">fidanka.fiducial.methods.mc module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.fiducial.methods.html#module-fidanka.fiducial.methods">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.fiducial.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.fiducial.html#module-fidanka.fiducial.fiducial">fidanka.fiducial.fiducial module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.MC_convex_hull_density_approximation"><code class="docutils literal notranslate"><span class="pre">MC_convex_hull_density_approximation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.approximate_fiducial_line_function"><code class="docutils literal notranslate"><span class="pre">approximate_fiducial_line_function()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.color_mag_from_filters"><code class="docutils literal notranslate"><span class="pre">color_mag_from_filters()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.density_color_cut"><code class="docutils literal notranslate"><span class="pre">density_color_cut()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.gaussian_mixture_modeling_peak_extraction"><code class="docutils literal notranslate"><span class="pre">gaussian_mixture_modeling_peak_extraction()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.get_mag_and_color_ranges"><code class="docutils literal notranslate"><span class="pre">get_mag_and_color_ranges()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.histogram_peak_extraction"><code class="docutils literal notranslate"><span class="pre">histogram_peak_extraction()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.hull_density"><code class="docutils literal notranslate"><span class="pre">hull_density()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.instantaious_hull_density"><code class="docutils literal notranslate"><span class="pre">instantaious_hull_density()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.instantaious_hull_density_cpp"><code class="docutils literal notranslate"><span class="pre">instantaious_hull_density_cpp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.load_density"><code class="docutils literal notranslate"><span class="pre">load_density()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.log_likelihood"><code class="docutils literal notranslate"><span class="pre">log_likelihood()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.log_prior"><code class="docutils literal notranslate"><span class="pre">log_prior()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.log_probability"><code class="docutils literal notranslate"><span class="pre">log_probability()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.measure_fiducial_lines"><code class="docutils literal notranslate"><span class="pre">measure_fiducial_lines()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.noise_robust_spline_peak_extraction"><code class="docutils literal notranslate"><span class="pre">noise_robust_spline_peak_extraction()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.percentage_within_n_standard_deviations"><code class="docutils literal notranslate"><span class="pre">percentage_within_n_standard_deviations()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.perp_distance"><code class="docutils literal notranslate"><span class="pre">perp_distance()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.renormalize"><code class="docutils literal notranslate"><span class="pre">renormalize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.ridge_bounding"><code class="docutils literal notranslate"><span class="pre">ridge_bounding()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.shift_photometry_by_error"><code class="docutils literal notranslate"><span class="pre">shift_photometry_by_error()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.spline_based_density_peak_extraction"><code class="docutils literal notranslate"><span class="pre">spline_based_density_peak_extraction()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.verticalize_CMD"><code class="docutils literal notranslate"><span class="pre">verticalize_CMD()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducial.waveform_collapse_peak_extraction"><code class="docutils literal notranslate"><span class="pre">waveform_collapse_peak_extraction()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.fiducial.html#module-fidanka.fiducial.fiducialLine">fidanka.fiducial.fiducialLine module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducialLine.fiducial_line"><code class="docutils literal notranslate"><span class="pre">fiducial_line</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducialLine.fiducial_line.add_measurement"><code class="docutils literal notranslate"><span class="pre">fiducial_line.add_measurement()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducialLine.fiducial_line.confidence"><code class="docutils literal notranslate"><span class="pre">fiducial_line.confidence()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducialLine.fiducial_line.mean"><code class="docutils literal notranslate"><span class="pre">fiducial_line.mean</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.fiducialLine.fiducial_line.std"><code class="docutils literal notranslate"><span class="pre">fiducial_line.std</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.fiducial.html#module-fidanka.fiducial.utils">fidanka.fiducial.utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.utils.GMM_component_measurment"><code class="docutils literal notranslate"><span class="pre">GMM_component_measurment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.utils.bin_color_mag_density"><code class="docutils literal notranslate"><span class="pre">bin_color_mag_density()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.utils.clean_bins"><code class="docutils literal notranslate"><span class="pre">clean_bins()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.utils.mag_bins"><code class="docutils literal notranslate"><span class="pre">mag_bins()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.utils.median_ridge_line_estimate"><code class="docutils literal notranslate"><span class="pre">median_ridge_line_estimate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.utils.normalize_density_magBin"><code class="docutils literal notranslate"><span class="pre">normalize_density_magBin()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.fiducial.html#fidanka.fiducial.utils.percentile_range"><code class="docutils literal notranslate"><span class="pre">percentile_range()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.fiducial.html#module-fidanka.fiducial">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.isochrone.html">fidanka.isochrone package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.isochrone.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.isochrone.html#module-fidanka.isochrone.MIST">fidanka.isochrone.MIST module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isochrone.html#fidanka.isochrone.MIST.read_iso"><code class="docutils literal notranslate"><span class="pre">read_iso()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isochrone.html#fidanka.isochrone.MIST.read_iso_metadata"><code class="docutils literal notranslate"><span class="pre">read_iso_metadata()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.isochrone.html#module-fidanka.isochrone.isochrone">fidanka.isochrone.isochrone module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isochrone.html#fidanka.isochrone.isochrone.calc_extinction_coef"><code class="docutils literal notranslate"><span class="pre">calc_extinction_coef()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isochrone.html#fidanka.isochrone.isochrone.interCMDatMag"><code class="docutils literal notranslate"><span class="pre">interCMDatMag()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isochrone.html#fidanka.isochrone.isochrone.interp_isochrone_age"><code class="docutils literal notranslate"><span class="pre">interp_isochrone_age()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isochrone.html#fidanka.isochrone.isochrone.iso_color_mag"><code class="docutils literal notranslate"><span class="pre">iso_color_mag()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isochrone.html#fidanka.isochrone.isochrone.load_ISO_CMDs"><code class="docutils literal notranslate"><span class="pre">load_ISO_CMDs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isochrone.html#fidanka.isochrone.isochrone.shift_full_iso"><code class="docutils literal notranslate"><span class="pre">shift_full_iso()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isochrone.html#fidanka.isochrone.isochrone.shift_isochrone"><code class="docutils literal notranslate"><span class="pre">shift_isochrone()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.isochrone.html#module-fidanka.isochrone">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.isofit.html">fidanka.isofit package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.isofit.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.isofit.html#module-fidanka.isofit">fidanka.isofit module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.isofit.html#module-fidanka.isofit.fit">fidanka.isofit.fit module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.fit.fit_isochrone_to_population"><code class="docutils literal notranslate"><span class="pre">fit_isochrone_to_population()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.fit.get_ISO_CMD_Chi2"><code class="docutils literal notranslate"><span class="pre">get_ISO_CMD_Chi2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.fit.get_init_mu_guess"><code class="docutils literal notranslate"><span class="pre">get_init_mu_guess()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.fit.guess_mu"><code class="docutils literal notranslate"><span class="pre">guess_mu()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.fit.limit_mu_space"><code class="docutils literal notranslate"><span class="pre">limit_mu_space()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.fit.optimize"><code class="docutils literal notranslate"><span class="pre">optimize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.fit.order_best_fit_result"><code class="docutils literal notranslate"><span class="pre">order_best_fit_result()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.isofit.html#module-fidanka.isofit.models">fidanka.isofit.models module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.models.BolCorOp"><code class="docutils literal notranslate"><span class="pre">BolCorOp</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.models.BolCorOp.itypes"><code class="docutils literal notranslate"><span class="pre">BolCorOp.itypes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.models.BolCorOp.otypes"><code class="docutils literal notranslate"><span class="pre">BolCorOp.otypes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.models.BolCorOp.perform"><code class="docutils literal notranslate"><span class="pre">BolCorOp.perform()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.isofit.html#fidanka.isofit.models.pfD"><code class="docutils literal notranslate"><span class="pre">pfD()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.isofit.html#module-0">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.misc.html">fidanka.misc package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.misc.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.misc.html#module-fidanka.misc.parallel">fidanka.misc.parallel module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.misc.html#fidanka.misc.parallel.parallelize"><code class="docutils literal notranslate"><span class="pre">parallelize()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.misc.html#module-fidanka.misc.utils">fidanka.misc.utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.misc.html#fidanka.misc.utils.closest"><code class="docutils literal notranslate"><span class="pre">closest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.misc.html#fidanka.misc.utils.get_logger"><code class="docutils literal notranslate"><span class="pre">get_logger()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.misc.html#fidanka.misc.utils.get_samples"><code class="docutils literal notranslate"><span class="pre">get_samples()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.misc.html#fidanka.misc.utils.interpolate_arrays"><code class="docutils literal notranslate"><span class="pre">interpolate_arrays()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.misc.html#fidanka.misc.utils.inverse_cdf_sample"><code class="docutils literal notranslate"><span class="pre">inverse_cdf_sample()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.misc.html#module-fidanka.misc">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.warn.html">fidanka.warn package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.warn.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.warn.html#module-fidanka.warn.warnings">fidanka.warn.warnings module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.warn.html#fidanka.warn.warnings.warning_traceback"><code class="docutils literal notranslate"><span class="pre">warning_traceback()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.warn.html#module-fidanka.warn">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="module-fidanka">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-fidanka" title="Permalink to this heading"></a></h2>
+<section id="fidanka">
+<h3>Fidanka<a class="headerlink" href="#fidanka" title="Permalink to this heading"></a></h3>
+<p>Fiducual line generation along with isochrone fitting.</p>
+</section>
+<section id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h3>
+<section id="from-source">
+<h4>From Source<a class="headerlink" href="#from-source" title="Permalink to this heading"></a></h4>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">tboudreaux</span><span class="o">/</span><span class="n">fidanka</span><span class="o">.</span><span class="n">git</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span> <span class="n">fidanka</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="simple-examples">
+<h3>Simple Examples<a class="headerlink" href="#simple-examples" title="Permalink to this heading"></a></h3>
+<section id="single-isochrone-fitting">
+<h4>Single Isochrone Fitting<a class="headerlink" href="#single-isochrone-fitting" title="Permalink to this heading"></a></h4>
+<p>Imagine a file called HUGS1.csv which contains photometry and can be read with
+pandas for the globular cluster NGC 2808 in your current working directory.
+Also imagine a directory ISO which contains an isochron in the MIST format. We
+can fit that isochrone to the photometry as follows</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">fidanka.isochrone.MIST</span> <span class="kn">import</span> <span class="n">read_iso</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">fidanka.fiducual</span> <span class="kn">import</span> <span class="n">fiducual_line</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">fidanka.isofit.fit</span> <span class="kn">import</span> <span class="n">optimize</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">photometry</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;HUGS1.csv&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iso</span> <span class="o">=</span> <span class="n">read_iso</span><span class="p">(</span><span class="s2">&quot;ISO/mist.iso&quot;</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">filter1</span> <span class="o">=</span> <span class="n">photometry</span><span class="p">[</span><span class="s2">&quot;F275W&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">filter2</span> <span class="o">=</span> <span class="n">photometry</span><span class="p">[</span><span class="s2">&quot;F814W&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">error1</span> <span class="o">=</span> <span class="n">photometry</span><span class="p">[</span><span class="s2">&quot;F275W_RMS&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">error2</span> <span class="o">=</span> <span class="n">photometry</span><span class="p">[</span><span class="s2">&quot;F814W_RMS&quot;</span><span class="p">]</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fiducualLine</span> <span class="o">=</span> <span class="n">fiducual_line</span><span class="p">(</span><span class="n">filter1</span><span class="p">,</span> <span class="n">filter2</span><span class="p">,</span> <span class="n">error1</span><span class="p">,</span> <span class="n">error2</span><span class="p">,</span> <span class="n">reverseFilterOrder</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bestFitResults</span> <span class="o">=</span> <span class="n">optimize</span><span class="p">(</span><span class="n">fiducualLine</span><span class="p">,</span> <span class="n">iso</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;F275W&quot;</span><span class="p">,</span> <span class="s2">&quot;F814W&quot;</span><span class="p">,</span> <span class="s2">&quot;F814W&quot;</span><span class="p">))</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">bestFitResults</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to fidanka’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="fidanka.bolometric.html" class="btn btn-neutral float-right" title="fidanka.bolometric package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Emily M. Boudreaux.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fidanka.isofit package &mdash; fidanka 0.5 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="fidanka.misc package" href="fidanka.misc.html" />
+    <link rel="prev" title="fidanka.isochrone package" href="fidanka.isochrone.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            fidanka
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="fidanka.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.fiducial.html">Fiducial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.isochrone.html">Isochrone</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Fitting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-fidanka.isofit">fidanka.isofit module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-fidanka.isofit.fit">fidanka.isofit.fit module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.isofit.fit.fit_isochrone_to_population"><code class="docutils literal notranslate"><span class="pre">fit_isochrone_to_population()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.isofit.fit.get_ISO_CMD_Chi2"><code class="docutils literal notranslate"><span class="pre">get_ISO_CMD_Chi2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.isofit.fit.get_init_mu_guess"><code class="docutils literal notranslate"><span class="pre">get_init_mu_guess()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.isofit.fit.guess_mu"><code class="docutils literal notranslate"><span class="pre">guess_mu()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.isofit.fit.limit_mu_space"><code class="docutils literal notranslate"><span class="pre">limit_mu_space()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.isofit.fit.optimize"><code class="docutils literal notranslate"><span class="pre">optimize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.isofit.fit.order_best_fit_result"><code class="docutils literal notranslate"><span class="pre">order_best_fit_result()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-fidanka.isofit.models">fidanka.isofit.models module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.isofit.models.BolCorOp"><code class="docutils literal notranslate"><span class="pre">BolCorOp</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#fidanka.isofit.models.BolCorOp.itypes"><code class="docutils literal notranslate"><span class="pre">BolCorOp.itypes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fidanka.isofit.models.BolCorOp.otypes"><code class="docutils literal notranslate"><span class="pre">BolCorOp.otypes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fidanka.isofit.models.BolCorOp.perform"><code class="docutils literal notranslate"><span class="pre">BolCorOp.perform()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.isofit.models.pfD"><code class="docutils literal notranslate"><span class="pre">pfD()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-0">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.bolometric.html">Bolometric</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.exception.html">Exceptions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.warn.html">Warnings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.ext.html">C-Libs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.misc.html">Misc</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">fidanka</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="fidanka.html">fidanka package</a></li>
+      <li class="breadcrumb-item active">fidanka.isofit package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/fidanka.isofit.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fidanka-isofit-package">
+<h1>fidanka.isofit package<a class="headerlink" href="#fidanka-isofit-package" title="Permalink to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
+</section>
+<section id="module-fidanka.isofit">
+<span id="fidanka-isofit-module"></span><h2>fidanka.isofit module<a class="headerlink" href="#module-fidanka.isofit" title="Permalink to this heading"></a></h2>
+</section>
+<section id="module-fidanka.isofit.fit">
+<span id="fidanka-isofit-fit-module"></span><h2>fidanka.isofit.fit module<a class="headerlink" href="#module-fidanka.isofit.fit" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.isofit.fit.fit_isochrone_to_population">
+<span class="sig-prename descclassname"><span class="pre">fidanka.isofit.fit.</span></span><span class="sig-name descname"><span class="pre">fit_isochrone_to_population</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fiducialSequences</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ISOs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">pandas.core.frame.DataFrame</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fiducialLookup</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.isofit.fit.fit_isochrone_to_population" title="Permalink to this definition"></a></dt>
+<dd><p>Take a set of isochrones which vary in population, helium mass fraction,
+and alpha enhancement and fit them to a fiducial line using chi2
+minimization. Then order those isochrones into their best fit version</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fiducialSequences</strong> (<em>List</em><em>[</em><em>np.ndarray</em><em>[</em><em>[</em><em>np.ndarray</em><em>[</em><em>float64</em><em>]</em><em>, </em><em>np.ndarray</em><em>[</em><em>float64</em><em>]</em><em>]</em><em>]</em><em>]</em>) – list of Fiducual lines in the format output by the fiducual
+function. Where fiducialLine[:, 0] are the colors of each fiducual
+point and fiducialLine[:, 1] are the magniudes of each fiducual
+point. Each element of the list is a differenet fiducual line
+for a differenet population. If you only have one population
+this will be a single element list.</p></li>
+<li><p><strong>ISOs</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>dict</em><em>[</em><em>float</em><em>, </em><em>dict</em><em>[</em><em>float</em><em>, </em><em>pd.DataFrame</em><em>]</em><em>]</em><em>]</em>) – dictionary of isochrones indexed by population name, helium mass
+fraction, and alpha enhancement. If loaded and bolometrically
+corrected using pysep then this will be in the correct format.
+Otherwise make sure that it includes filters called
+“WFC3_UVIS_filter[0..2]_MAG” which have your filters in them. In
+future this will be cleaned up to allow for more general filters.</p></li>
+<li><p><strong>filters</strong> (<em>Tuple</em><em>[</em><em>str</em><em>, </em><em>str</em><em>, </em><em>str</em><em>]</em><em>, </em><em>default=</em><em>(</em><em>&quot;F606W&quot;</em><em>, </em><em>&quot;F814W&quot;</em><em>, </em><em>&quot;F606W&quot;</em><em>)</em>) – Filter names to use (which will get injcected to form the column
+names used to get the color and mag. The color is defined as
+filter[0] - filter[1] and the mag is filter[2]</p></li>
+<li><p><strong>fiducialLookup</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>int</em><em>]</em>) – Mapping between ISOs and fiducialSequences. If your ISOs contains
+for example 1 populations called main then fiducial lookup would
+have to be {“main”: 0}</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>out</strong> – This is a dictionary summarizing the entire minimization process
+the key bf has the orderd optimization results. The key r has the
+more detailed resutls of each chi2 minimization that took place.
+The tuples in bf allow you to lookup anything in r</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.isofit.fit.get_ISO_CMD_Chi2">
+<span class="sig-prename descclassname"><span class="pre">fidanka.isofit.fit.</span></span><span class="sig-name descname"><span class="pre">get_ISO_CMD_Chi2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iso</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fiducialLine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.bctab.BolometricCorrector" title="fidanka.bolometric.bctab.BolometricCorrector"><span class="pre">BolometricCorrector</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fFid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('F606W',</span> <span class="pre">'F814W',</span> <span class="pre">'F606W')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Av</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#fidanka.isofit.fit.get_ISO_CMD_Chi2" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the reduced chi2 value between an isochrone and a fiducialLine
+at a given distance in parsecs and color excess. The Chi2 is calculated
+as the sum of the squares of the distance between equivilent evolutionary
+points as detected by dynamic time warping.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>iso</strong> (<em>pd.DataFrame</em>) – The isochrone. If loaded and bolometrically corrected using pysep
+then this will be in the correct format. Otherwise make sure that
+it includes filters called “WFC3_UVIS_filter[0..2]_MAG” which have
+your filters in them. In future this will be cleaned up to allow for
+more general filters.</p></li>
+<li><p><strong>fiducialLine</strong> (<em>np.ndarray</em><em>[</em><em>[</em><em>np.ndarray</em><em>[</em><em>float64</em><em>]</em><em>, </em><em>np.ndarray</em><em>[</em><em>float64</em><em>]</em><em>]</em><em>]</em>) – Fiducual line in the format output by the fiducual function. Where
+fiducialLine[:, 0] are the colors of each fiducual point and
+fiducialLine[:, 1] are the magniudes of each fiducual point.</p></li>
+<li><p><strong>fFid</strong> (<em>Callable</em>) – The fiducial line function. This function must take a magnitude and return a color.</p></li>
+<li><p><strong>filters</strong> (<em>Tuple</em><em>[</em><em>str</em><em>, </em><em>str</em><em>, </em><em>str</em><em>]</em><em>, </em><em>default=</em><em>(</em><em>&quot;F606W&quot;</em><em>, </em><em>&quot;F814W&quot;</em><em>, </em><em>&quot;F606W&quot;</em><em>)</em>) – Filter names to use (which will get injcected to form the column
+names used to get the color and mag. The color is defined as
+filter[0] - filter[1] and the mag is filter[2])</p></li>
+<li><p><strong>distance</strong> (<em>float</em><em>, </em><em>default = 0</em>) – Distance in parsecs to shift isochrone by when calculating the chi2
+value</p></li>
+<li><p><strong>Av</strong> (<em>float</em><em>, </em><em>default = 0</em>) – Color excess to shift isochrone by when calculating the chi2 value</p></li>
+<li><p><strong>age</strong> (<em>float</em><em>, </em><em>default = None</em>) – The Age Currently being optimized. Not used here directly; however, if passed
+will be used as an additional debug output.</p></li>
+<li><p><strong>n</strong> (<em>int</em><em>, </em><em>default = 100</em>) – The number of points to use when calculating the interpolation
+used for the final dtw distance match (which is used to calculate
+the final chi2).</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em><em>, </em><em>default = False</em>) – Flag controlling whether verbose output will be used. This can
+be helpful for debugging; however, it may slow down the code.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>chi2nu</strong> – Reduced chi2 value. Calculated from the sum of the squares of the
+distances between EEPs between the fiducual line and
+isochrone as identified by dtw. Chi2 reduction is preformed then by dividing the chi2
+value by the number of points used to calculate it.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.isofit.fit.get_init_mu_guess">
+<span class="sig-prename descclassname"><span class="pre">fidanka.isofit.fit.</span></span><span class="sig-name descname"><span class="pre">get_init_mu_guess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iso</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fiducialLine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.bctab.BolometricCorrector" title="fidanka.bolometric.bctab.BolometricCorrector"><span class="pre">BolometricCorrector</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.isofit.fit.get_init_mu_guess" title="Permalink to this definition"></a></dt>
+<dd><p>Make a first pass guess at the distance modulus using mean alignment
+of the magnitude at Av=0. Further optimization will have to be done
+but this preprocessing allows other algorithms such as the
+cross dtw algorithm to work</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>iso</strong> (<em>np.ndarray</em>) – The isochrones (MIST format). This must have the temperature
+as the 2nd column, the logg as the third, and the log L as
+the first (the first column should be the EEPs; however, those
+are not actually used in this function).</p></li>
+<li><p><strong>fiducualLine</strong> (<em>np.ndarray</em>) – The fiducial line to be fit to. This should be a 2D array where
+the first column is the color of each fiducial point and the
+second column is the magnitude of each fiducial point. Therefore
+the shape will be (nx2) where n is the number of fiducial points.</p></li>
+<li><p><strong>bc</strong> (<a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.bctab.BolometricCorrector" title="fidanka.bolometric.bctab.BolometricCorrector"><em>BolometricCorrector</em></a>) – A bolometric corrector object which will be used to shift the isochrone
+into apparent magnitude space.</p></li>
+<li><p><strong>filters</strong> (<em>Tuple</em><em>[</em><em>str</em><em>, </em><em>str</em><em>, </em><em>str</em><em>]</em>) – A tuple of string representing the two magnitudes used to make color
+and the magnitude for the vertical axis. The reason there are three
+and not two is to allow for easily swapping the order of which
+color component is the magnitude (as for example is common in the
+F275-F814W CMD). The color will be filter[0]-filter[1] and the
+mag will be filter[3].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>shift</strong> (<em>float</em>) – The guessed distance modulus based on the mean magnitude alignment
+of the fiducial line and the bolometrically corrected isochrone</p></li>
+<li><p><strong>isoMag</strong> (<em>np.ndarray</em>) – The bolometrically corrected magnitude shifted by the distance
+modulus guess.</p></li>
+<li><p><strong>isoColor</strong> (<em>np.ndarray</em>) – The bolometrically corrected color.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.isofit.fit.guess_mu">
+<span class="sig-prename descclassname"><span class="pre">fidanka.isofit.fit.</span></span><span class="sig-name descname"><span class="pre">guess_mu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fIso</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fFid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isoMagRange</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fidMagRange</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nMin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nMax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mMin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mMax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbar</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.isofit.fit.guess_mu" title="Permalink to this definition"></a></dt>
+<dd><p>Use Dynamic Time Warping to estimate the mu adjustment between the fiducial
+line and isochrone optimization. This algorithm is somewhat convoluted; however,
+it works well. The steps are as follows</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p>Generate a grid of ns. These represent the number of points which will
+be used to run a latter interpolation step. The reason for this approach
+as compared to just using one larger n is that the scaling of dtw is O(n^2).
+However, by averaging the subsequent results over many small ns,
+we can get a good estimate.</p></li>
+<li><p>At each n we run something similar to a cross-correlation. However, instead
+of the peasron correlation we calculate the dtw distance and path between
+the two functions.
+2a. Using the path, which will connect equivilent features such as the MSTO</p>
+<blockquote>
+<div><p>from the isochrone to the fiducial line, we can calculate the average
+euclidian shift between equivilent points on the two functions.</p>
+</div></blockquote>
+</li>
+<li><p>We take magnitude shift which results in the best (lowest) average euclidian
+disttance between the two functions.</p></li>
+<li><p>Over all ns we average these best magitude shits.</p></li>
+</ol>
+</div></blockquote>
+<p>I’ve tested this algorithm on a large number of cases, some of which are quite gnarlly.
+And it seems to work well. It is also quite fast. The only downside is that it is
+the initial location of the curves must be somewhat close. This can be easily
+achived using mean magnitude alignment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fIso</strong> (<em>Callable</em>) – The isochrone function. This function must take a magnitude and return a color.</p></li>
+<li><p><strong>fFid</strong> (<em>Callable</em>) – The fiducial line function. This function must take a magnitude and return a color.</p></li>
+<li><p><strong>isoMagRange</strong> (<em>Tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em>) – The magnitude range of the isochrone.</p></li>
+<li><p><strong>fidMagRange</strong> (<em>Tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em>) – The magnitude range of the fiducial line.</p></li>
+<li><p><strong>nMin</strong> (<em>int</em><em>, </em><em>default=5</em>) – The minimum number of points to use in the interpolation.</p></li>
+<li><p><strong>nMax</strong> (<em>int</em><em>, </em><em>default=20</em>) – The maximum number of points to use in the interpolation.</p></li>
+<li><p><strong>mMin</strong> (<em>float</em><em>, </em><em>default=-10</em>) – The minimum magnitude shift to consider.</p></li>
+<li><p><strong>mMax</strong> (<em>float</em><em>, </em><em>default=10</em>) – The maximum magnitude shift to consider.</p></li>
+<li><p><strong>pbar</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether or not to show a progress bar.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>mean</strong> (<em>float</em>) – The mean magnitude shift.</p></li>
+<li><p><strong>std</strong> (<em>float</em>) – The standard deviation of the magnitude shift.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.isofit.fit.limit_mu_space">
+<span class="sig-prename descclassname"><span class="pre">fidanka.isofit.fit.</span></span><span class="sig-name descname"><span class="pre">limit_mu_space</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iso</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fiducialLine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.bctab.BolometricCorrector" title="fidanka.bolometric.bctab.BolometricCorrector"><span class="pre">BolometricCorrector</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fFid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbar</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.isofit.fit.limit_mu_space" title="Permalink to this definition"></a></dt>
+<dd><p>Use the two step, mean mangitude alignment and dtw cross correlation to guess
+the distance modulus which should be applied to some isochchrone. Also guess
+the scatter in this distance modulus. This can be used to limit the search
+space for latter true optimization algorithms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>iso</strong> (<em>np.ndarray</em>) – The isochrones (MIST format). This must have the temperature
+as the 2nd column, the logg as the third, and the log L as
+the first (the first column should be the EEPs; however, those
+are not actually used in this function).</p></li>
+<li><p><strong>fiducualLine</strong> (<em>np.ndarray</em>) – The fiducial line to be fit to. This should be a 2D array where
+the first column is the color of each fiducial point and the
+second column is the magnitude of each fiducial point. Therefore
+the shape will be (nx2) where n is the number of fiducial points.</p></li>
+<li><p><strong>bc</strong> (<a class="reference internal" href="fidanka.bolometric.html#fidanka.bolometric.bctab.BolometricCorrector" title="fidanka.bolometric.bctab.BolometricCorrector"><em>BolometricCorrector</em></a>) – A bolometric corrector object which will be used to shift the isochrone
+into apparent magnitude space.</p></li>
+<li><p><strong>filters</strong> (<em>Tuple</em><em>[</em><em>str</em><em>, </em><em>str</em><em>, </em><em>str</em><em>]</em>) – A tuple of string representing the two magnitudes used to make color
+and the magnitude for the vertical axis. The reason there are three
+and not two is to allow for easily swapping the order of which
+color component is the magnitude (as for example is common in the
+F275-F814W CMD). The color will be filter[0]-filter[1] and the
+mag will be filter[3].</p></li>
+<li><p><strong>fFid</strong> (<em>Callable</em>) – The fiducial line function. This function must take a magnitude and return a color.</p></li>
+<li><p><strong>pbar</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether or not to show a progress bar.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>totalShift</strong> (<em>float</em>) – The distance modulus (not guarrenteed to have the correct sign, you may
+have to take the absoulte value) which best minimized the dtw cross
+correlation function on average</p></li>
+<li><p><strong>magStd</strong> (<em>float</em>) – The one sigma standard deviation in the distance modulus optimization</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.isofit.fit.optimize">
+<span class="sig-prename descclassname"><span class="pre">fidanka.isofit.fit.</span></span><span class="sig-name descname"><span class="pre">optimize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fiducial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float64</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isochrone</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bolTables</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">FeH</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('F606W',</span> <span class="pre">'F814W',</span> <span class="pre">'F606W')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">muSigSize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">muAge</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.isofit.fit.optimize" title="Permalink to this definition"></a></dt>
+<dd><p>Run Chi2 optimization results on photometry and isochrone minimizing the
+age, distance, and reddining needed to fit the isochrone to the fiducial
+line.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fiducialLine</strong> (<em>np.ndarray</em><em>[</em><em>[</em><em>np.ndarray</em><em>[</em><em>float64</em><em>]</em><em>, </em><em>np.ndarray</em><em>[</em><em>float64</em><em>]</em><em>]</em><em>]</em>) – Fiducual line in the format output by the fiducual function. Where
+fiducialLine[:, 0] are the colors of each fiducual point and
+fiducialLine[:, 1] are the magniudes of each fiducual point.</p></li>
+<li><p><strong>isochrone</strong> (<em>dict</em><em>[</em><em>pd.DataFrame</em><em>]</em>) – The isochrone. If loaded and bolometrically corrected using pysep
+then this will be in the correct format. Otherwise make sure that
+it includes filters called “WFC3_UVIS_filter[0..2]_MAG” which have
+your filters in them. In future this will be cleaned up to allow for
+more general filters.</p></li>
+<li><p><strong>filters</strong> (<em>Tuple</em><em>[</em><em>str</em><em>, </em><em>str</em><em>, </em><em>str</em><em>]</em><em>, </em><em>default=</em><em>(</em><em>&quot;F606W&quot;</em><em>, </em><em>&quot;F814W&quot;</em><em>, </em><em>&quot;F606W&quot;</em><em>)</em>) – Filter names to use (which will get injcected to form the column
+names used to get the color and mag). The color is defined as
+filter[0] - filter[1] and the mag is filter[2]</p></li>
+<li><p><strong>FeH</strong> (<em>float</em>) – The [Fe/H] value to use when bolometrically correcting isochrones.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em><em>, </em><em>default = False</em>) – Flag controlling whether verbose output will be used. This can
+be helpful for debugging; however, it may slow down the code.</p></li>
+<li><p><strong>muSigSize</strong> (<em>float</em><em>, </em><em>default = 3</em>) – The width of the sigma distribution above and below the central mu
+guess to be explored. Large values will allow for more leway in the
+E(B-V) value optimized. However, they will also slow down the
+optimizer and may increase the likelyhood of falling into a local
+minima</p></li>
+<li><p><strong>muAge</strong> (<em>float</em><em>, </em><em>default=10</em>) – The age at which to estimate the distance modulus in Gyr.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>optimized</strong> – The optimization results</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>OptimizeResult</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.isofit.fit.order_best_fit_result">
+<span class="sig-prename descclassname"><span class="pre">fidanka.isofit.fit.</span></span><span class="sig-name descname"><span class="pre">order_best_fit_result</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizationResults</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.isofit.fit.order_best_fit_result" title="Permalink to this definition"></a></dt>
+<dd><p>Order the best fit optimization results so that they are easy to parse.
+Ordering is done based on the fun attribure of the OptimizeResult object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>optimizationResults</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>dict</em><em>[</em><em>float</em><em>, </em><em>dict</em><em>[</em><em>float</em><em>, </em><em>CHI2R</em><em>]</em><em>]</em><em>]</em>) – Where CHI2R is the return type of the optimize function.
+This is a dictionary of those indexed based on population name,
+helium mass fraction, and alpha enhancement.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p><strong>comparison</strong> – Where ORT is a Tuple continuing the chi2nu minimal result, the
+input vector x attaining that result (in the order of age,
+distance, Av), the population name, the helium mass fraction, and
+the alpha enhancement. The dict comparison is broken into two keys,
+one A and one E for the two populations of NGC 2808.</p>
+<p>TODO: Make this more general so that it does not depend on the two
+populations of 2808. This should be pretty trivial to do</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, List[ORT]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-fidanka.isofit.models">
+<span id="fidanka-isofit-models-module"></span><h2>fidanka.isofit.models module<a class="headerlink" href="#module-fidanka.isofit.models" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="fidanka.isofit.models.BolCorOp">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fidanka.isofit.models.</span></span><span class="sig-name descname"><span class="pre">BolCorOp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">isoDict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fiducial</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.isofit.models.BolCorOp" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Op</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="fidanka.isofit.models.BolCorOp.itypes">
+<span class="sig-name descname"><span class="pre">itypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Type'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[TensorType(float64,</span> <span class="pre">shape=(None,))]</span></em><a class="headerlink" href="#fidanka.isofit.models.BolCorOp.itypes" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="fidanka.isofit.models.BolCorOp.otypes">
+<span class="sig-name descname"><span class="pre">otypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Type'</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[TensorType(float64,</span> <span class="pre">shape=())]</span></em><a class="headerlink" href="#fidanka.isofit.models.BolCorOp.otypes" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fidanka.isofit.models.BolCorOp.perform">
+<span class="sig-name descname"><span class="pre">perform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outputs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.isofit.models.BolCorOp.perform" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the function on the inputs and put the variables in the output storage.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node</strong> – The symbolic <cite>Apply</cite> node that represents this computation.</p></li>
+<li><p><strong>inputs</strong> – Immutable sequence of non-symbolic/numeric inputs.  These
+are the values of each <cite>Variable</cite> in <code class="xref py py-attr docutils literal notranslate"><span class="pre">node.inputs</span></code>.</p></li>
+<li><p><strong>output_storage</strong> – List of mutable single-element lists (do not change the length of
+these lists).  Each sub-list corresponds to value of each
+<cite>Variable</cite> in <code class="xref py py-attr docutils literal notranslate"><span class="pre">node.outputs</span></code>.  The primary purpose of this method
+is to set the values of these sub-lists.</p></li>
+<li><p><strong>params</strong> – A tuple containing the values of each entry in <code class="xref py py-attr docutils literal notranslate"><span class="pre">Op.__props__</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The <cite>output_storage</cite> list might contain data. If an element of
+output_storage is not <code class="docutils literal notranslate"><span class="pre">None</span></code>, it has to be of the right type, for
+instance, for a <cite>TensorVariable</cite>, it has to be a NumPy <code class="docutils literal notranslate"><span class="pre">ndarray</span></code>
+with the right number of dimensions and the correct dtype.
+Its shape and stride pattern can be arbitrary. It is not
+guaranteed that such pre-set values were produced by a previous call to
+this <code class="xref py py-meth docutils literal notranslate"><span class="pre">Op.perform()</span></code>; they could’ve been allocated by another
+<cite>Op</cite>’s <cite>perform</cite> method.
+An <cite>Op</cite> is free to reuse <cite>output_storage</cite> as it sees fit, or to
+discard it and allocate new memory.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.isofit.models.pfD">
+<span class="sig-prename descclassname"><span class="pre">fidanka.isofit.models.</span></span><span class="sig-name descname"><span class="pre">pfD</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">I</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.isofit.models.pfD" title="Permalink to this definition"></a></dt>
+<dd><p>Return a function which givex the perpendicular distance between a point and
+a function evaluated at some point x</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>r</strong> (<em>np.ndarray</em><em>[</em><em>float64</em><em>]</em>) – 2-vector (x,y), some point</p></li>
+<li><p><strong>I</strong> (<em>Callable</em>) – Function of a single parameter I(x) -&gt; y.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>d</strong> – Function of form d(x) which gives the distance between r and I(x)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-0">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-0" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="fidanka.isochrone.html" class="btn btn-neutral float-left" title="fidanka.isochrone package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="fidanka.misc.html" class="btn btn-neutral float-right" title="fidanka.misc package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Emily M. Boudreaux.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

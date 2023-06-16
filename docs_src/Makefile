@@ -7,6 +7,7 @@ SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = source
 BUILDDIR      = build
+GH_PAGES      = ../docs
 
 
 help:
@@ -20,3 +21,4 @@ help:
 	sphinx-apidoc -f -o $(SOURCEDIR) ../src/fidanka/
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	rsync -av $(BUILDDIR)/html/ $(BUILDDIR)/html/docs --exclude docs
+	rsync -av $(BUILDDIR)/html/ $(GH_PAGES) --exclude docs
