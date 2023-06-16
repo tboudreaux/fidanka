@@ -11,14 +11,16 @@ from hashlib import sha256
 
 RKE = re.compile(r"Av=(\d+\.\d+):Rv=(\d+\.\d+)")
 
+
 class BolometricCorrector:
-    def __init__(self, paths, FeH):
+    def __init__(self, paths, FeH, filters=["F606W", "F814W"]):
+        self.filters = filters
         self.paths = paths
         self.tables = dict()
         self.tableFeHs = np.empty(len(paths))
         self.FeH = FeH
         for idx, path in enumerate(paths):
-            tabFeH = re.search("feh([mp]\d+)", path).group(1)
+            tabFeH = re.search(r"feh([mp]\d+)", path).group(1)
             if tabFeH[0] == 'm':
                 sign = -1
             else:
@@ -42,6 +44,16 @@ class BolometricCorrector:
         self.upperBCTable = load_bol_table(upperBCTablePath)
         self.lowerBCTable = load_bol_table(lowerBCTablePath)
         self.header = self.upperBCTable[list(self.upperBCTable.keys())[0]].columns
+        self.fullFilterNames = [
+                x for x in self.header if any([fn in x for fn in self.filters])
+                ]
+        self.filterKeyIDs = [
+                self.header.get_loc(i)
+                for i in self.fullFilterNames
+                if i in self.header
+                ]
+        self.filterKeyIDs.insert(0,1)
+        self.filterKeyIDs.insert(0,0)
 
         self.BCTabs = dict()
         for (lKey, lower), (uKey, upper) in zip(self.lowerBCTable.items(), self.upperBCTable.items()):
@@ -71,32 +83,6 @@ class BolometricCorrector:
         self._cacheHash = None
         self._cacheHits = 0
         self._cacheMisses = 0
-
-    def get_Av_correct_tables(self, table, Av, Rv=3.1):
-        lowerAv, upperAv = closest(self.Av, Av)
-        if lowerAv == None:
-            lowerAv = self.Av[0]
-            upperAv = self.Av[1]
-        elif upperAv == None:
-            lowerAv = self.Av[-2]
-            upperAv = self.Av[-1]
-        if lowerAv == upperAv:
-            reddeningKey = (Av,Rv)
-            return table[reddeningKey]
-
-        lowerKey = (lowerAv, Rv)
-        upperKey = (upperAv, Rv)
-        lowerTable = table[lowerKey]
-        upperTable = table[upperKey]
-        interpolatedTable = interpolate_arrays(
-                lowerTable.values,
-                upperTable.values,
-                Av,
-                lowerAv,
-                upperAv
-                )
-        interpolatedTable = pd.DataFrame(data=interpolatedTable, columns=upperTable.columns)
-        return interpolatedTable
 
     def _check_cache(self, Av, Rv):
         cacheHash = sha256(
@@ -131,35 +117,48 @@ class BolometricCorrector:
             self._reset_cache()
             self._update_cache_hash(Av, Rv)
 
-
             lowerAv, upperAv = closest(self.Av, Av)
             upperKey, lowerKey = (upperAv, Rv), (lowerAv, Rv)
             upperAvTab = self.BCTabs[upperKey]
             lowerAvTab = self.BCTabs[lowerKey]
 
-            targetBC = interpolate_arrays(
-                    lowerAvTab,
-                    upperAvTab,
-                    Av,
-                    lowerAv,
-                    upperAv
-                    )
+            if upperKey == lowerKey:
+                targetBC = upperAvTab
+            else:
+                targetBC = interpolate_arrays(
+                        lowerAvTab,
+                        upperAvTab,
+                        Av,
+                        lowerAv,
+                        upperAv
+                        )
 
-            targetBC = pd.DataFrame(data=targetBC, columns=self.header)
+            targetBC = targetBC[:, self.filterKeyIDs]
             self._cache['targetBC'] = targetBC
 
-
         # get the magnitudes corrected for interstellar reddening
-        dustCorrectedMags = get_mags(Teff, logg, logL, targetBC)
+        try:
+            dustCorrectedMags = get_mags(Teff, logg, logL, targetBC)
+        except Exception as e:
+            print(f"Error in get_mags: {e}")
+            print(f"Av: {Av}, Rv: {Rv}")
+            print(f"targetBC: {targetBC}")
+            print(f"targetBC.columns: {targetBC.columns}")
+            print(f"targetBC.index: {targetBC.index}")
+            print(f"Teff: {Teff}, logg: {logg}, logL: {logL}")
+            print(f"self.header: {self.header}")
+            print(f"mu: {mu}")
+            print(f"self.FeH: {self.FeH}")
+            print(f"self.FeHBounds: {self.FeHBounds}")
+            print(f"self.Av: {self.Av}")
+            raise e
 
         # get the magnitudes corrected for distance modulus
         dustDistCorectedMags = {
                 filterName : mag + mu
-                for filterName, mag in dustCorrectedMags.items()
+                for filterName, mag in zip(self.filters, dustCorrectedMags.T)
                 }
-
-
-        return pd.DataFrame(dustDistCorectedMags)
+        return dustDistCorectedMags
 
     def __repr__(self):
         return f"BolometricCorrector([Fe/H] : {self.FeH})"

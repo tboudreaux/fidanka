@@ -8,7 +8,7 @@ import pandas as pd
 REJECTNAMES = ["Teff", "logg", "[Fe/H]", "Av", "Rv"]
 SOLBOL = 4.75
 
-def _get_mags(Teff, logg, logL, table):
+def _get_mags(Teff, logg, logL, corrections):
     """
     Get the magnitudes of a star given its Teff, logg, logL, and bolometric
     correction table.
@@ -29,13 +29,11 @@ def _get_mags(Teff, logg, logL, table):
     magnitudes : dict
         Dictionary of magnitudes for each filter in the bolometric correction
     """
-    filterNames = list(filter(lambda x: x not in REJECTNAMES, table.columns))
-    magNames = map(lambda x: f"{x}_MAG", filterNames)
-    magnitudes = dict()
-    for magName, filterName in zip(magNames, filterNames):
-        tabTeff = table["Teff"].values
-        tabLogg = table["logg"].values
-        tabMag = table[filterName].values
+    magnitudes = np.zeros(shape=(Teff.shape[0],corrections.shape[1]-2))
+    tabTeff = corrections[:, 0]
+    tabLogg = corrections[:, 1]
+    for magID, _ in enumerate(magnitudes.T):
+        tabMag = corrections[:, magID + 2]
 
         TMask, gMask, tabMask = np.isnan(tabTeff), np.isnan(tabLogg), np.isnan(tabMag)
         imask = np.logical_or(TMask, gMask, tabMask)
@@ -46,18 +44,8 @@ def _get_mags(Teff, logg, logL, table):
         i, o = np.vstack((tabTeff, tabLogg)).T, tabMag
         o = tabMag
 
-        try:
-            interpFunc = LinearNDInterpolator(i, o)
-            magnitudes[magName] = SOLBOL-2.5*logL - interpFunc(Teff, logg)
-        except Exception as e:
-            print(mask)
-            print(tabTeff, tabLogg, tabMag)
-            print(table["Teff"].values)
-            print(table["logg"].values)
-            print(i.shape, o.shape, mask.shape)
-            print(set(mask))
-            print(e)
-            exit()
+        interpFunc = LinearNDInterpolator(i, o)
+        magnitudes[:, magID] = SOLBOL-2.5*logL - interpFunc(Teff, logg)
     return magnitudes
 
 

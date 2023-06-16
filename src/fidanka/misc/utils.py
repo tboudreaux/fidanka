@@ -2,6 +2,7 @@ import numpy as np
 import numpy.typing as npt
 from typing import Callable, Tuple, Union
 from scipy.interpolate import interp1d
+import logging
 
 FARRAY_1D = npt.NDArray
 
@@ -157,7 +158,8 @@ def interpolate_arrays(
         array_upper : npt.NDArray,
         target : float,
         lower : float,
-        upper : float
+        upper : float,
+        joinCol : Union[int, None] = None
         ) -> npt.NDArray:
     """
     Interpolate between two arrays. The arrays must have the same shape.
@@ -174,7 +176,8 @@ def interpolate_arrays(
             value at lower bounding array
         upper : float
             value at upper bounding array
-
+        joinCol : int, default=None
+            Column to join on. If None, assumes the arrays are parallel
     Returns
     -------
         interpolated_array : NDArray[float]
@@ -189,9 +192,21 @@ def interpolate_arrays(
 
     >>> interpolate_arrays(array_lower, array_upper, 5.5, 5, 6)
     """
-    array_lower = np.array(array_lower)
-    array_upper = np.array(array_upper)
+    if array_lower is None or array_upper is None:
+        raise ValueError("Both arrays must be non-None")
 
+    if not isinstance(array_lower, np.ndarray):
+        array_lower = np.array(array_lower)
+
+    if not isinstance(array_upper, np.ndarray):
+        array_upper = np.array(array_upper)
+
+    if joinCol is not None:
+        shared = np.intersect1d(array_lower[:,joinCol], array_upper[:,joinCol])
+        lowerMask = np.isin(array_lower[:,joinCol], shared)
+        upperMask = np.isin(array_upper[:,joinCol], shared)
+        array_lower = array_lower[lowerMask]
+        array_upper = array_upper[upperMask]
     # Ensure both arrays have the same shape
     assert array_lower.shape == array_upper.shape, "Arrays must have the same shape"
 
@@ -203,3 +218,25 @@ def interpolate_arrays(
     interpolated_array = (array_lower * lower_weight) + (array_upper * upper_weight)
 
     return interpolated_array
+
+def get_logger(name, level=logging.INFO, flevel=logging.INFO, clevel=logging.WARNING):
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    if not logger.hasHandlers():
+        # create a file handler
+        file_handler = logging.FileHandler('fidanka.log')
+        file_handler.setLevel(flevel)
+
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(clevel)
+
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+    return logger
+

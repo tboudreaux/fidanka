@@ -1,3 +1,4 @@
+from fidanka.misc.utils import interpolate_arrays
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -273,24 +274,24 @@ def interp_isochrone_age(
     distance = [(x-targetAgeYr, x) for x in ageKeys]
     below = sorted(filter(lambda x: x[0] <=0, distance), key=lambda x: abs(x[0]))
     above = sorted(filter(lambda x: x[0] > 0, distance), key=lambda x: x[0])
-    isoBelow = iso[below[0][1]]
-    isoAbove = iso[above[0][1]]
 
-    assert isoBelow is not None
-    assert isoAbove is not None
+    age1 = below[0][1]
+    age2 = above[0][1]
+    isoBelow = iso[age1]
+    isoAbove = iso[age2]
 
-    assert 'log10_isochrone_age_yr' in isoAbove
-    assert 'log10_isochrone_age_yr' in isoBelow
-
-    age1 = isoBelow['log10_isochrone_age_yr'].iloc[0]
-    age2 = isoAbove['log10_isochrone_age_yr'].iloc[0]
+    age1 = np.log10(age1)
+    age2 = np.log10(age2)
     logTargetAgeYr = np.log10(targetAgeYr)
 
-    def linearinterpolate(x, other, age1, age2):
-        newIso = ((other[x.name] - x)/(age2-age1)) * (logTargetAgeYr - age1) + x
-        return newIso
-    interpolated = isoBelow.apply(lambda x: linearinterpolate(x, isoAbove, age1, age2))
-    interpolated = interpolated.dropna()
+    interpolated = interpolate_arrays(
+            isoBelow,
+            isoAbove,
+            age1,
+            age2,
+            logTargetAgeYr,
+            joinCol=0
+            )
 
     return interpolated
 
