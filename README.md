@@ -21,7 +21,7 @@ pip install -e .
 
 ## Examples
 
-### Measuring the fiducual lines of a cluster with multiple populations
+### Measuring the fiducial lines of a cluster with multiple populations
 Assuming you have your photometry stored in some datastructure (here I retrive it from a pickle
 as a pandas dataframe), and you have a prior that there are 2 populations within the
 cluster, you can measure those fiducial lines as follows
@@ -46,8 +46,8 @@ fiducialLine = measure_fiducial_lines(
         mcruns=MC,
         nPops = 2
         )
-popA = fiducualLine[0]
-popB = fiducualLine[1]
+popA = fiducialLine[0]
+popB = fiducialLine[1]
 
 popAMean = popA.mean
 popA5th = popA.confidence(0.05)
