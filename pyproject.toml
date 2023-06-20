@@ -32,7 +32,6 @@ dependencies = [
   "pymc",
   "scikit-learn"
 	]
-version = {attr = "__version__.__version__"}
 
 [project.urls]
 Homepage = "https://github.com/tboudreaux/fidanka"
