@@ -13,3 +13,8 @@ repos:
     rev: 23.3.0
     hooks:
     - id: black
+- repo: https://github.com/commitizen-tools/commitizen
+  rev: 3.4.0
+  hooks:
+  - id: commitizen
+    stages: [commit-msg]
