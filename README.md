@@ -44,6 +44,11 @@ git add <files>
 cz c
 ```
 
+## Notes
+(June 20th, 2023): I have tested this and it is easily installable on Mac OS 13.4. However, there seems to be some bug with out setup tools
+deals with external c libs and numpy which crops up in ubuntu. I will continue to work on this but as it stands currently
+you may have to manually point your pythonpath at the fidanka repo on linux distros.
+
 ## Examples
 
 ### Measuring the fiducial lines of a cluster with multiple populations
