@@ -32,6 +32,7 @@ dependencies = [
   "pymc",
   "scikit-learn"
 	]
+dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://github.com/tboudreaux/fidanka"
@@ -62,3 +63,6 @@ version_files = [
     "pyproject.toml:version",
     "src/fidanka/__version__.py"
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "fidanka.__version__"}
