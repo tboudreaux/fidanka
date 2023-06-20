@@ -160,7 +160,8 @@ def median_ridge_line_estimate(color,
                                sigmaCut = 3,
                                cleaningIterations=10,
                                components=100,
-                               normBinSize=0.3):
+                               normBinSize=0.3,
+                               targetStat=250,):
     colorBins, magBins, densityBins = bin_color_mag_density(
             color,
             mag,
@@ -168,7 +169,7 @@ def median_ridge_line_estimate(color,
             binSize,
             max_Num_bin,
             binSize_min,
-            targetStat=250)
+            targetStat=targetStat)
     colorBins, magBins, densityBins = clean_bins(
             colorBins,
             magBins,
