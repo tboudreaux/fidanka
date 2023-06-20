@@ -10,7 +10,7 @@ authors = [
 	]
 description="Fiducual line generation and isochone fitting"
 readme="README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 keywords=["Globular Cluster"]
 license = { file = "LICENSE" }
 classifiers = [
@@ -39,7 +39,7 @@ Homepage = "https://github.com/tboudreaux/fidanka"
 
 [tool.black]
 line-length = 88  # Specify the line length
-target-version = ['py37', 'py38', 'py39', 'py310', 'py311']  # Specify your Python version
+target-version = ['py310', 'py311']  # Specify your Python version
 include = '\.pyi?$'
 exclude = '''  # Specify the files/dirs that should be ignored by the black formatter
 /(
