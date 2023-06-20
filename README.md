@@ -13,7 +13,10 @@ A short presentation which I've given on fidanka may be found <a href="https://a
 
 ## Install
 
-### From Source
+### PyPi
+Fidnka will be avalible on PyPi soon; however, it is not currently avalible anywhere other than GitHub.
+
+### From Source (latest)
 
 ```bash
 git clone https://github.com/tboudreaux/fidanka.git
