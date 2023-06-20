@@ -267,6 +267,54 @@ def limit_mu_space(
 
     return totalShift, magStd
 
+def bol_correct_iso(
+        iso : npt.NDArray,
+        bc : BolometricCorrector,
+        filters : Tuple[str, str, str] = ("F606W", "F814W", "F606W"),
+        Av : float = 0,
+        distance : float = 0,
+        ) -> Tuple[npt.NDArray, npt.NDArray]:
+    """
+    Bolometrically correct an isochrone and return the color and magnitude
+    arrays. The isochrone must be in the correct format (i.e. the MIST format).
+
+    Parameters
+    ----------
+        iso : np.ndarray
+            The isochrone to bolometrically corerect, must be a numpy representation
+            of a MIST format isochrone with EEPs in the 0th column, effective
+            temperature (NOT log Teff) in the 1st, logg in the 2nd, and logL in the 
+            3rd.
+        bc : BolometricCorrector
+            An already instantiaed bolometric corrector object.
+        filters : Tuple[str, str, str], default=("F606W", "F814W", "F606W")
+            The filters to use for the color and magnitude. The first two
+            are the color filters and the last is the magnitude filter.
+        Av : float, default=0
+            The color excess.
+        distance : float, default=0
+            The distance modulus.
+
+    Returns
+    -------
+        isoColor : np.ndarray
+            The bolometrically corrected color.
+        isoMag : np.ndarray
+            The bolometrically corrected magnitude.
+    """
+    logger = get_logger("fidanka.isofit.fit.bol_correct_iso")
+
+    bolCorrected = bc.apparent_mags(
+        iso[:,1],
+        iso[:,2],
+        iso[:,3],
+        Av=Av,
+        mu=distance)
+
+    isoColor = bolCorrected[filters[0]] - bolCorrected[filters[1]]
+    isoMag = bolCorrected[filters[2]]
+    return isoColor, isoMag
+
 def get_ISO_CMD_Chi2(
         iso : pd.DataFrame,
         fiducialLine : FARRAY_2D_2C ,
@@ -328,16 +376,12 @@ def get_ISO_CMD_Chi2(
             value by the number of points used to calculate it.
     """
     logger = get_logger("fidanka.isofit.fit.get_ISO_CMD_Chi2")
-
-    bolCorrected = bc.apparent_mags(
-        iso[:,1],
-        iso[:,2],
-        iso[:,3],
-        Av=Av,
-        mu=distance)
-
-    isoColor = bolCorrected[filters[0]] - bolCorrected[filters[1]]
-    isoMag = bolCorrected[filters[2]]
+    isoColor, isoMag = bol_correct_iso(
+            iso,
+            bc,
+            filters=filters,
+            Av=Av,
+            distance=distance)
 
     transposedFiducial = fiducialLine.T
 
@@ -491,7 +535,7 @@ def optimize(
     logger.info(f"Minimization complete, age: {optimized.x[0]:0.3f}, mu: {optimized.x[1]:0.3f}, E(B-V): {optimized.x[2]:0.3f}")
 
     assert isinstance(optimized, OptimizeResult)
-    return optimized
+    return {'opt': optimized, 'iso': isochrone, 'bc': bc}
 
 def order_best_fit_result(
         optimizationResults: dict[str, dict[float, dict[float, CHI2R]]]
@@ -524,7 +568,7 @@ def order_best_fit_result(
     for pop, popD in optimizationResults.items():
         for Y, YD in popD.items():
             for a, aD in YD.items():
-                comparison[pop].append((aD['fun'], aD['x'], pop, Y, a))
+                comparison[pop].append((aD['opt']['fun'], aD['opt']['x'], pop, Y, a, aD['bc'], aD['iso']))
         comparison[pop] = sorted(comparison[pop], key=lambda x: x[0])
     return comparison
 

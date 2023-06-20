@@ -6,8 +6,9 @@ Written by Emily M. Boudreaux and Martin Ying.
 	<img width="460" height="460" src="/assets/fidankaLogo.png">
 </p>
 
-## Docs
-API Docs can be found <a href="https://tboudreaux.github.io/fidanka/">here</a>
+## Docs & Information
+The full API Documentation can be found <a href="https://tboudreaux.github.io/fidanka/">here</a>
+A short presentation which I've given on fidanka may be found <a href="https://algebrist.ddns.net/~tboudreaux/presentations/VAST/#/">here</a>
 
 ## Install
 
