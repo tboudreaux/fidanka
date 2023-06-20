@@ -1,12 +1,14 @@
 #!/usr/bin/env python
-
-
 from setuptools import setup, Extension
+from .__version__ import __version__
+
 
 class get_numpy_include(object):
     def __str__(self):
         import numpy
+
         return numpy.get_include()
+
 
 ext = Extension(
     "fidanka.ext.nearest_neighbors",
@@ -15,4 +17,4 @@ ext = Extension(
 )
 
 if __name__ == "__main__":
-    setup(name="fidanka",ext_modules=[ext],version="0.6")
+    setup(name="fidanka", ext_modules=[ext], version=__version__)

@@ -27,10 +27,31 @@ dependencies = [
 	"tqdm",
 	"pandas",
 	"pybind11",
-	"emcee"
+	"emcee",
+  "pyTensor",
+  "pymc",
+  "scikit-learn"
 	]
-version = "0.6"
+version = {attr = "__version__.__version__"}
 
 [project.urls]
 Homepage = "https://github.com/tboudreaux/fidanka"
 
+[tool.black]
+line-length = 88  # Specify the line length
+target-version = ['py37', 'py38', 'py39', 'py310', 'py311']  # Specify your Python version
+include = '\.pyi?$'
+exclude = '''  # Specify the files/dirs that should be ignored by the black formatter
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''

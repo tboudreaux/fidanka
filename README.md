@@ -18,8 +18,22 @@ A short presentation which I've given on fidanka may be found <a href="https://a
 ```bash
 git clone https://github.com/tboudreaux/fidanka.git
 cd fidanka
-pip install -e .
+pip install .
 ```
+
+### Development
+In order to develope for fidanka it will be helpful to also istall a few more packages. We also reccomend you work in a virtual enviroment.
+Moreover, you must work in your own fork of fidanka and issue pull requests. First fork fidanka on github.
+```bash
+conda create --name fidankaDev python=3
+pip install pre-commit
+pip install commitizen
+git clone https://github.com/<your-username>/fidanka.git
+pip install -e .
+pre-commit install
+pre-commit autoupdate
+```
+
 
 ## Examples
 
@@ -66,7 +80,7 @@ pandas for the globular cluster NGC 2808 in your current working directory.
 Also imagine an isochrone called iso.txt (In the MIST format) in the current working directory. We
 can fit that isochrone to the photometry as follows. Also imagine we still
 have popA loaded from the previous example. Finally, imagine you have a series of bolometric
-correction tables in the current directory stored in a folder called "bolTables". 
+correction tables in the current directory stored in a folder called "bolTables".
 These tables should be in the format avalible on the MIST website.
 
 ```python
