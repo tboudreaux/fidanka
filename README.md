@@ -22,8 +22,8 @@ pip install .
 ```
 
 ### Development
-In order to develope for fidanka it will be helpful to also istall a few more packages. We also reccomend you work in a virtual enviroment.
-Moreover, you must work in your own fork of fidanka and issue pull requests. First fork fidanka on github.
+In order to develop for fidanka it will be helpful to also install a few more packages. We also recommend you work in a virtual environment.
+Moreover, you must work in your own fork of fidanka and issue pull requests. First fork fidanka on GitHub.
 ```bash
 conda create --name fidankaDev python=3
 pip install pre-commit
@@ -33,16 +33,22 @@ pip install -e .
 pre-commit install
 pre-commit autoupdate
 ```
+While use commitizen is not required when contributing, it is highly encouraged.
+If you do use commitizen then the add commit workflow is as follows
 
+```bash
+git add <files>
+cz c
+```
 
 ## Examples
 
-### Measuring the fiducual lines of a cluster with multiple populations
-Assuming you have your photometry stored in some datastructure (here I retrive it from a pickle
+### Measuring the fiducial lines of a cluster with multiple populations
+Assuming you have your photometry stored in some data structure (here I retrieve it from a pickle
 as a pandas dataframe), and you have a prior that there are 2 populations within the
 cluster, you can measure those fiducial lines as follows
 
-This measurment will resample the data 1000 times and remeasure the fiducial lines each time
+This measurement will re-sample the data 1000 times and remeasure the fiducial lines each time
 in order to get confidence intervals and a mean.
 ```python
 from fidanka.fiducial import measure_fiducial_lines
@@ -81,7 +87,7 @@ Also imagine an isochrone called iso.txt (In the MIST format) in the current wor
 can fit that isochrone to the photometry as follows. Also imagine we still
 have popA loaded from the previous example. Finally, imagine you have a series of bolometric
 correction tables in the current directory stored in a folder called "bolTables".
-These tables should be in the format avalible on the MIST website.
+These tables should be in the format available on the MIST website.
 
 ```python
 from fidanka.isochrone.MIST import read_iso
@@ -129,8 +135,8 @@ get_logger("rootLoggerName", "testRun.log", clevel=logging.INFO)
 This will result in much more information being written to std out. The first
 argument is the name of the logger module and can be whatever you like. The second
 is the filename for the file handler. There are also keyword arguments
-clevel, flevel, and level which control the minum logger level to be written
-to the console, the file, and either respectivley.
+clevel, flevel, and level which control the minimum logger level to be written
+to the console, the file, and either respectively.
 
 
 ### Population Synthethis
@@ -168,11 +174,11 @@ pop = population(
     "F606W"
 )
 
-# Note that the population Synthethis runs when the code
+# Note that the population Synthesis runs when the code
 # gets here, NOT at population instantiation time
 # this can also be called with pop.data().
 # If this function is called multiple times the same results
-# will be returned for the same obeject as a cache is used
+# will be returned for the same object as a cache is used
 df = pop.to_pandas()
 pop.to_csv("TestPop.csv")
 ```
