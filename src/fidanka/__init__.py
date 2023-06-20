@@ -44,4 +44,4 @@ can fit that isochrone to the photometry as follows
 >>> print(bestFitResults)
 
 """
-__version__ = "0.6.0"
+__version__ = "0.6.1"
