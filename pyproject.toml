@@ -61,7 +61,7 @@ name = "cz_conventional_commits"
 version = "0.6.0"
 version_files = [
     "pyproject.toml:version",
-    "src/fidanka/__version__.py"
+    "src/fidanka/__init__.py"
 ]
 
 [tool.setuptools.dynamic]

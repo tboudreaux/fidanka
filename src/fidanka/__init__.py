@@ -32,7 +32,7 @@ can fit that isochrone to the photometry as follows
 >>> import pandas as pd
 >>> photometry = pd.read_csv("HUGS1.csv")
 >>> iso = read_iso("ISO/mist.iso")
->>> 
+>>>
 >>> filter1 = photometry["F275W"]
 >>> filter2 = photometry["F814W"]
 >>> error1 = photometry["F275W_RMS"]
@@ -44,3 +44,4 @@ can fit that isochrone to the photometry as follows
 >>> print(bestFitResults)
 
 """
+__version__ = "0.6.0"
