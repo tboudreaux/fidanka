@@ -1,4 +1,6 @@
 # Fidanka
+[![Forks](https://img.shields.io/github/forks/tboudreaux/fidanka.svg?style=for-the-badge)](https://github.com/tboudreaux/fidanka)
+[![Stars](https://img.shields.io/github/stars/tboudreaux/fidanka.svg?style=for-the-badge)](https://github.com/tboudreaux/fidanka)
 Fidanka is an (hopefully) easy to use python package for doing science with globular clusters.
 Written by Emily M. Boudreaux and Martin Ying.
 
