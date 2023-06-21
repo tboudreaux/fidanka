@@ -2,7 +2,7 @@ import numpy as np
 
 
 def test_clean_bins():
-    inputData = np.loadtxt("./inputData.txt")
+    inputData = np.loadtxt("./input/inputData-clean_bins.txt")
     sortedInputIDX = np.argsort(inputData[:, 0])
     sortedInput = inputData[sortedInputIDX]
     bins = np.linspace(sortedInput[:, 0].min(), sortedInput[:, 0].max(), 10)
@@ -25,7 +25,7 @@ def test_clean_bins():
     )
     import pickle as pkl
 
-    with open("target.pkl", "rb") as f:
+    with open("./target/target-clean_bins.pkl", "rb") as f:
         target = pkl.load(f)
 
     XSame = True
@@ -39,6 +39,10 @@ def test_clean_bins():
         ZSame &= np.equal(nz, tz).all()
 
     assert XSame & YSame & ZSame
+
+
+def test_normalize_density_magBin():
+    ...
 
 
 if __name__ == "__main__":
