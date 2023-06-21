@@ -5,11 +5,6 @@ Fidanka Tests are currently immature and the overall code coverage of them is st
 In order to run tests simply run
 
 ```bash
-make
-```
-
-if you wish to test a particular submodule, such as the fiducial module
-
-```bash
-make fiducial
+chmod u+x runTest.sh
+./runTest.sh
 ```
