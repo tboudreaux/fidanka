@@ -28,11 +28,17 @@ def test_clean_bins():
     with open("target.pkl", "rb") as f:
         target = pkl.load(f)
 
-    XSame = (newX == target["x"]).all()
-    YSame = (newY == target["y"]).all()
-    ZSame = (newZ == target["z"]).all()
+    XSame = True
+    YSame = True
+    ZSame = True
+    for nx, ny, nz, tx, ty, tz in zip(
+        newX, newY, newZ, target["x"], target["y"], target["z"]
+    ):
+        XSame &= np.equal(nx, tx).all()
+        YSame &= np.equal(ny, ty).all()
+        ZSame &= np.equal(nz, tz).all()
 
-    assert XSame and YSame and ZSame
+    assert XSame & YSame & ZSame
 
 
 if __name__ == "__main__":
