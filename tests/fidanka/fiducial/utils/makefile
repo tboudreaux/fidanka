@@ -1,4 +1,4 @@
 default: all
 
 all:
-	pytest
+	coverage run -m pytest

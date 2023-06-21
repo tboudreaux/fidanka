@@ -1,4 +1,37 @@
 import numpy as np
+import pickle as pkl
+import pandas as pd
+import os
+
+PHOTDIR = os.path.join(os.environ.get("FIDANKATESTDIR"), "input/photometry.csv")
+
+
+def test_bin_color_mag_density():
+    photometry = pd.read_csv(PHOTDIR)
+
+    from fidanka.fiducial.utils import bin_color_mag_density
+
+    color, mag, density = bin_color_mag_density(
+        photometry["F275W"] - photometry["F814W"],
+        photometry["F814W"],
+        photometry["F275W"],
+        targetStat=50,
+    )
+
+    with open("./target/target-bin_color_mag_density.pkl", "rb") as f:
+        target = pkl.load(f)
+
+    colorSame = True
+    magSame = True
+    densitySame = True
+    for c, m, d, tc, tm, td in zip(
+        color, mag, density, target["color"], target["mag"], target["density"]
+    ):
+        colorSame &= np.equal(c, tc).all()
+        magSame &= np.equal(m, tm).all()
+        densitySame &= np.equal(d, td).all()
+
+    assert colorSame & magSame & densitySame
 
 
 def test_clean_bins():
@@ -23,7 +56,6 @@ def test_clean_bins():
     newX, newY, newZ = clean_bins(
         binnedDataX, binnedDataY, binnedDataZ, sigma=3, iterations=1
     )
-    import pickle as pkl
 
     with open("./target/target-clean_bins.pkl", "rb") as f:
         target = pkl.load(f)
@@ -42,8 +74,16 @@ def test_clean_bins():
 
 
 def test_normalize_density_magBin():
-    ...
+    photometry = pd.read_csv(PHOTDIR)
+    from fidanka.fiducial.utils import bin_color_mag_density
+
+    color, mag, density = bin_color_mag_density(
+        photometry["F275W"] - photometry["F814W"],
+        photometry["F814W"],
+        photometry["F275W"],
+        targetStat=50,
+    )
 
 
 if __name__ == "__main__":
-    test_clean_bins()
+    test_bin_color_mag_density()
