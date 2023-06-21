@@ -1,4 +1,7 @@
 #!/bin/bash
 #
 export FIDANKA_TEST_ROOT_DIR=$(pwd)
-coverage
+coverage erase
+coverage run -m pytest
+coverage report
+coverage html

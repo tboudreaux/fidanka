@@ -3,11 +3,20 @@ import pickle as pkl
 import pandas as pd
 import os
 
-PHOTDIR = os.path.join(os.environ.get("FIDANKATESTDIR"), "input/photometry.csv")
+FIDANKA_ROOT = os.environ.get("FIDANKA_TEST_ROOT_DIR")
+
+assert FIDANKA_ROOT is not None, "Please set FIDANKA_TEST_ROOT_DIR environment variable"
+
+PHOTCSV = os.path.join(FIDANKA_ROOT, "input/photometry.csv")
+
+MODULEDIR = os.path.join(FIDANKA_ROOT, "fiducial/utils/")
+
+TARGETDIR = os.path.join(MODULEDIR, "target")
+INPUTDIR = os.path.join(MODULEDIR, "input")
 
 
 def test_bin_color_mag_density():
-    photometry = pd.read_csv(PHOTDIR)
+    photometry = pd.read_csv(PHOTCSV)
 
     from fidanka.fiducial.utils import bin_color_mag_density
 
@@ -18,7 +27,7 @@ def test_bin_color_mag_density():
         targetStat=50,
     )
 
-    with open("./target/target-bin_color_mag_density.pkl", "rb") as f:
+    with open(os.path.join(TARGETDIR, "target-bin_color_mag_density.pkl"), "rb") as f:
         target = pkl.load(f)
 
     colorSame = True
@@ -35,7 +44,7 @@ def test_bin_color_mag_density():
 
 
 def test_clean_bins():
-    inputData = np.loadtxt("./input/inputData-clean_bins.txt")
+    inputData = np.loadtxt(os.path.join(INPUTDIR, "inputData-clean_bins.txt"))
     sortedInputIDX = np.argsort(inputData[:, 0])
     sortedInput = inputData[sortedInputIDX]
     bins = np.linspace(sortedInput[:, 0].min(), sortedInput[:, 0].max(), 10)
@@ -57,7 +66,7 @@ def test_clean_bins():
         binnedDataX, binnedDataY, binnedDataZ, sigma=3, iterations=1
     )
 
-    with open("./target/target-clean_bins.pkl", "rb") as f:
+    with open(os.path.join(TARGETDIR, "target-clean_bins.pkl"), "rb") as f:
         target = pkl.load(f)
 
     XSame = True
@@ -74,7 +83,7 @@ def test_clean_bins():
 
 
 def test_normalize_density_magBin():
-    photometry = pd.read_csv(PHOTDIR)
+    photometry = pd.read_csv(PHOTCSV)
     from fidanka.fiducial.utils import bin_color_mag_density
 
     color, mag, density = bin_color_mag_density(
