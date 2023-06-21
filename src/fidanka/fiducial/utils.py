@@ -19,12 +19,12 @@ R2_VECTOR = npt.NDArray[[np.float64, np.float64]]
 
 
 def clean_bins(
-        colorBins : List[FARRAY_1D],
-        magBins : List[FARRAY_1D],
-        densityBins : List[FARRAY_1D],
-        sigma : float = 5,
-        iterations : int = 1
-        ) -> Tuple[List[FARRAY_1D], List[FARRAY_1D], List[FARRAY_1D]]:
+    colorBins: List[FARRAY_1D],
+    magBins: List[FARRAY_1D],
+    densityBins: List[FARRAY_1D],
+    sigma: float = 5,
+    iterations: int = 1,
+) -> Tuple[List[FARRAY_1D], List[FARRAY_1D], List[FARRAY_1D]]:
     """
     Remove high sigma outliers from the bins. Repeat the process iterativly.
 
@@ -62,24 +62,33 @@ def clean_bins(
     for i, (color, mag, density) in enumerate(zip(colorBins, magBins, densityBins)):
         meanColor = np.mean(color)
         stdColor = np.std(color)
-        cut = (color >= meanColor - sigma*stdColor) & (color < meanColor + sigma*stdColor)
+        cut = (color >= meanColor - sigma * stdColor) & (
+            color < meanColor + sigma * stdColor
+        )
         newColorBins.append(color[cut])
         newMagBins.append(mag[cut])
         newDensityBins.append(density[cut])
 
     # Repeat the process if needed
     if iterations > 1:
-        return clean_bins(newColorBins, newMagBins, newDensityBins, sigma=sigma, iterations=iterations-1)
+        return clean_bins(
+            newColorBins,
+            newMagBins,
+            newDensityBins,
+            sigma=sigma,
+            iterations=iterations - 1,
+        )
 
     return newColorBins, newMagBins, newDensityBins
 
+
 def normalize_density_magBin(
-        color : FARRAY_1D,
-        mag : FARRAY_1D,
-        density : FARRAY_1D,
-        binSize : float = 0.1,
-        pbar : bool = False
-        ) -> FARRAY_1D:
+    color: FARRAY_1D,
+    mag: FARRAY_1D,
+    density: FARRAY_1D,
+    binSize: float = 0.1,
+    pbar: bool = False,
+) -> FARRAY_1D:
     """
     Normalize the density of each point on a CMD by the mean of the densities
     within binSize of the point. This allows densities to be compared between
@@ -105,13 +114,16 @@ def normalize_density_magBin(
 
     """
     normDensity = np.zeros(shape=color.shape[0])
-    for IDx, (c, m, d) in tqdm(enumerate(zip(color, mag, density)), total=len(density), disable=not pbar):
-        cut = (mag > m-binSize/2) & (mag <= m+binSize/2)
+    for IDx, (c, m, d) in tqdm(
+        enumerate(zip(color, mag, density)), total=len(density), disable=not pbar
+    ):
+        cut = (mag > m - binSize / 2) & (mag <= m + binSize / 2)
         binDensity = density[cut]
         meanBinDensity = np.mean(binDensity)
-        normalizedDensity = d/meanBinDensity
+        normalizedDensity = d / meanBinDensity
         normDensity[IDx] = normalizedDensity
     return normDensity
+
 
 def GMM_component_measurment(xB, yB, n=50):
     """
@@ -151,40 +163,35 @@ def GMM_component_measurment(xB, yB, n=50):
     gmm_means = np.squeeze(gmm_means)
     return gmm_means
 
-def median_ridge_line_estimate(color,
-                               mag,
-                               density,
-                               binSize='uniformCS',
-                               max_Num_bin = False,
-                               binSize_min=0.1,
-                               sigmaCut = 3,
-                               cleaningIterations=10,
-                               components=100,
-                               normBinSize=0.3):
-    colorBins, magBins, densityBins = bin_color_mag_density(
-            color,
-            mag,
-            density,
-            binSize,
-            max_Num_bin,
-            binSize_min,
-            targetStat=250)
-    colorBins, magBins, densityBins = clean_bins(
-            colorBins,
-            magBins,
-            densityBins,
-            sigma=sigmaCut,
-            iterations=cleaningIterations
-            )
-    ridgeLine = np.zeros(shape=(4,len(colorBins)))
 
-    components = min(100, int(len(colorBins)*0.1))
-    gmm_means = GMM_component_measurment(colorBins, densityBins,n=components)
+def median_ridge_line_estimate(
+    color,
+    mag,
+    density,
+    binSize="uniformCS",
+    max_Num_bin=False,
+    binSize_min=0.1,
+    sigmaCut=3,
+    cleaningIterations=10,
+    components=100,
+    normBinSize=0.3,
+    targetStat=250,
+):
+    colorBins, magBins, densityBins = bin_color_mag_density(
+        color, mag, density, binSize, max_Num_bin, binSize_min, targetStat=targetStat
+    )
+    colorBins, magBins, densityBins = clean_bins(
+        colorBins, magBins, densityBins, sigma=sigmaCut, iterations=cleaningIterations
+    )
+    ridgeLine = np.zeros(shape=(4, len(colorBins)))
+
+    components = min(100, int(len(colorBins) * 0.1))
+    gmm_means = GMM_component_measurment(colorBins, densityBins, n=components)
     color = np.median(gmm_means, axis=1)
     mag = np.array([np.mean(x) for x in magBins])
 
     lowPercentile = np.percentile(gmm_means, 68.97, axis=1)
-    highPercentile = np.percentile(gmm_means, 100-68.97, axis=1)
+    highPercentile = np.percentile(gmm_means, 100 - 68.97, axis=1)
 
     ridgeLine[0] = color
     ridgeLine[1] = mag
@@ -193,11 +200,10 @@ def median_ridge_line_estimate(color,
 
     return ridgeLine
 
+
 def percentile_range(
-        X : Union[FARRAY_1D, pd.Series],
-        percLow : float,
-        percHigh : float
-        ) -> Tuple[float, float]:
+    X: Union[FARRAY_1D, pd.Series], percLow: float, percHigh: float
+) -> Tuple[float, float]:
     """
     Extract ranges from an array based on requested percentiles
 
@@ -218,17 +224,18 @@ def percentile_range(
     xRange = (np.percentile(X, percLow), np.percentile(X, percHigh))
     return xRange
 
+
 def bin_color_mag_density(
-        color : FARRAY_1D,
-        mag : FARRAY_1D,
-        density : FARRAY_1D,
-        binSize : Union[str, float] = 'uniformCS',
-        percLow : float = None,
-        percHigh : float = None,
-        max_Num_bin : Union[bool, int] = False,
-        binSize_min : float = 0.1,
-        targetStat : int = 1000,
-        ) -> Tuple[FARRAY_1D, FARRAY_1D, FARRAY_1D]:
+    color: FARRAY_1D,
+    mag: FARRAY_1D,
+    density: FARRAY_1D,
+    binSize: Union[str, float] = "uniformCS",
+    percLow: float = None,
+    percHigh: float = None,
+    max_Num_bin: Union[bool, int] = False,
+    binSize_min: float = 0.1,
+    targetStat: int = 1000,
+) -> Tuple[FARRAY_1D, FARRAY_1D, FARRAY_1D]:
     """
     Use the bin edges from mag_bins to split the color, mag, and density arrays
     into lists of arrays.
@@ -267,12 +274,7 @@ def bin_color_mag_density(
     """
     if max_Num_bin == 0:
         max_Num_bin = False
-    left, right = mag_bins(
-            mag,
-            percHigh,
-            percLow,
-            binSize,
-            targetStat=targetStat)
+    left, right = mag_bins(mag, percHigh, percLow, binSize, targetStat=targetStat)
 
     colorBins = list()
     magBins = list()
@@ -284,15 +286,16 @@ def bin_color_mag_density(
         densityBins.append(density[condition])
     return colorBins, magBins, densityBins
 
+
 def mag_bins(
-        mag : Union[FARRAY_1D, pd.Series],
-        percHigh : float,
-        percLow : float,
-        binSize : Union[str, float],
-        maxNumBins: Union[bool, int] = False,
-        binSizeMin: float = 0.1,
-        targetStat: float = 1000
-        ) -> Tuple[FARRAY_1D, FARRAY_1D]:
+    mag: Union[FARRAY_1D, pd.Series],
+    percHigh: float,
+    percLow: float,
+    binSize: Union[str, float],
+    maxNumBins: Union[bool, int] = False,
+    binSizeMin: float = 0.1,
+    targetStat: float = 1000,
+) -> Tuple[FARRAY_1D, FARRAY_1D]:
     """
     Find the left and right edges of bins in magnitude space between magnitudes
     percLow and percHigh percentiles with a bin size of binSize. Find suitable
@@ -326,15 +329,15 @@ def mag_bins(
         binsRight : ndarray[float64]
             right edges of bins in magnitude space
     """
-    if binSize != 'uniformCS':
-        assert percLow is not None, 'percLow must be set if binSize is not uniformCS'
-        assert percHigh is not None, 'percHigh must be set if binSize is not uniformCS'
-    if binSize == 'adaptive':
+    if binSize != "uniformCS":
+        assert percLow is not None, "percLow must be set if binSize is not uniformCS"
+        assert percHigh is not None, "percHigh must be set if binSize is not uniformCS"
+    if binSize == "adaptive":
         lenMag = len(mag)
         if maxNumBins == False:
             binCountWanted = 50
         else:
-            binCountWanted = np.max((int(np.ceil(lenMag // maxNumBins)),50))
+            binCountWanted = np.max((int(np.ceil(lenMag // maxNumBins)), 50))
 
         magSort = np.sort(mag)
         binsLeft = [magSort[0]]
@@ -351,11 +354,11 @@ def mag_bins(
                     iLeft = i
                 i += 1
         binsLeft = np.array(binsLeft[:-1])
-        binsRight = np.append(np.array(binsRight[:-1]), magSort[-1]+0.001)
-    if binSize == 'uniformCS':
+        binsRight = np.append(np.array(binsRight[:-1]), magSort[-1] + 0.001)
+    if binSize == "uniformCS":
         srtedIDX = np.argsort(mag)
         sMag = mag[srtedIDX]
-        subs = np.floor(sMag.shape[0]/targetStat).astype(int)
+        subs = np.floor(sMag.shape[0] / targetStat).astype(int)
         binsM = np.array_split(sMag, subs)
         binsLeft = np.array([np.min(b) for b in binsM])
         binsRight = np.array([np.max(b) for b in binsM])
