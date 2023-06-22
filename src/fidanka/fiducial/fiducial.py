@@ -949,8 +949,8 @@ def measure_fiducial_lines(
             )
             gmm_vert_means = GMM_component_measurment(vColorBins, vDensityBins, n=nPops)
             # gmmVertMeansMC.append(gmm_vert_means)
+            vMagBinMeans = np.array([np.mean(x) for x in vMagBins])
             if nPops != 1:
-                vMagBinMeans = np.array([np.mean(x) for x in vMagBins])
                 for idx, cs in enumerate(gmm_vert_means):
                     sid = np.argsort(cs)
                     gmm_vert_means[idx] = cs[sid]
