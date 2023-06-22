@@ -3,6 +3,7 @@ import numpy.typing as npt
 from typing import Callable, Tuple, Union
 from scipy.interpolate import interp1d
 import logging
+from tqdm import tqdm
 
 from scipy.optimize import minimize
 
@@ -299,7 +300,7 @@ def measusre_perpendicular_distance(f1, f2, domain, pbar=False):
 
     """
     minDist = np.zeros(len(domain))
-    for idx, x in enumerate(domain, disable=not pbar):
+    for idx, x in tqdm(enumerate(domain), disable=not pbar):
         r0 = np.array([x, f1(x)])
         r1 = np.array([x, f2(x)])
         approxDist = np.sqrt((r0[0] - r1[0]) ** 2 + (r0[1] - r1[1]) ** 2)
