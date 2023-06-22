@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-from setuptools import setup, Extension
+from numpy.distutils.core import setup
+from numpy.distutils.extension import Extension
 
 
 class get_numpy_include(object):
