@@ -10,7 +10,7 @@
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  
+
         <script src="_static/jquery.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
@@ -20,17 +20,17 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="fidanka.warn package" href="fidanka.warn.html" />
-    <link rel="prev" title="fidanka.isofit package" href="fidanka.isofit.html" /> 
+    <link rel="prev" title="fidanka.isofit package" href="fidanka.isofit.html" />
 </head>
 
-<body class="wy-body-for-nav"> 
+<body class="wy-body-for-nav">
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
 
-          
-          
+
+
           <a href="index.html" class="icon icon-home">
             fidanka
           </a>
@@ -63,6 +63,8 @@
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.get_samples"><code class="docutils literal notranslate"><span class="pre">get_samples()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.interpolate_arrays"><code class="docutils literal notranslate"><span class="pre">interpolate_arrays()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.inverse_cdf_sample"><code class="docutils literal notranslate"><span class="pre">inverse_cdf_sample()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.measusre_perpendicular_distance"><code class="docutils literal notranslate"><span class="pre">measusre_perpendicular_distance()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.pfD"><code class="docutils literal notranslate"><span class="pre">pfD()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-fidanka.misc">Module contents</a></li>
@@ -94,7 +96,7 @@
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-             
+
   <section id="fidanka-misc-package">
 <h1>fidanka.misc package<a class="headerlink" href="#fidanka-misc-package" title="Permalink to this heading"></a></h1>
 <section id="submodules">
@@ -252,6 +254,58 @@ define the Gaussian distribution.</p>
 </div>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.misc.utils.measusre_perpendicular_distance">
+<span class="sig-prename descclassname"><span class="pre">fidanka.misc.utils.</span></span><span class="sig-name descname"><span class="pre">measusre_perpendicular_distance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.misc.utils.measusre_perpendicular_distance" title="Permalink to this definition"></a></dt>
+<dd><p>Measure the perpendicular distance between two functions
+over a given domain.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f1</strong> (<em>Callable</em>) – Function of a single parameter f1(x) -&gt; y.</p></li>
+<li><p><strong>f2</strong> (<em>Callable</em>) – Function of a single parameter f2(x) -&gt; y.</p></li>
+<li><p><strong>domain</strong> (<em>np.ndarray</em><em>[</em><em>float64</em><em>]</em>) – Domain over which to measure the distance.</p></li>
+<li><p><strong>pbar</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Show progress bar.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>minDist</strong> – Minimum distance between the two functions over the domain.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray[float64]</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Let’s measure the perpendicular distance between two functions.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f1</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f2</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">domain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">minDist</span> <span class="o">=</span> <span class="n">measusre_perpendicular_distance</span><span class="p">(</span><span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">domain</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.misc.utils.pfD">
+<span class="sig-prename descclassname"><span class="pre">fidanka.misc.utils.</span></span><span class="sig-name descname"><span class="pre">pfD</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">I</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.misc.utils.pfD" title="Permalink to this definition"></a></dt>
+<dd><p>Return a function which givex the perpendicular distance between a point and
+a function evaluated at some point x</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>r</strong> (<em>np.ndarray</em><em>[</em><em>float64</em><em>]</em>) – 2-vector (x,y), some point</p></li>
+<li><p><strong>I</strong> (<em>Callable</em>) – Function of a single parameter I(x) -&gt; y.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>d</strong> – Function of form d(x) which gives the distance between r and I(x)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Callable</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="module-fidanka.misc">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-fidanka.misc" title="Permalink to this heading"></a></h2>
@@ -275,7 +329,7 @@ define the Gaussian distribution.</p>
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
+
 
 </footer>
         </div>
@@ -286,7 +340,7 @@ define the Gaussian distribution.</p>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
 
 </body>
 </html>
