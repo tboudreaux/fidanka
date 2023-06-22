@@ -310,3 +310,4 @@ def measusre_perpendicular_distance(f1, f2, domain, pbar=False):
             print("Perpendicular Minimization Failed. No local Minima Identified.")
         else:
             minDist[idx] = d(nearestPoint.x[0])
+    return minDist
