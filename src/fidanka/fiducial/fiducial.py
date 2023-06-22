@@ -933,6 +933,7 @@ def approximate_fiducial_line_function(
         percHigh : float = 68.97,
         allowMax : bool = False,
         targetStat : int = 250,
+        binSize_min: float = 0.1,
         ) -> Callable:
     """
     Get an approximate fiducua line from a CMD using the basic ridge bounding
@@ -962,6 +963,8 @@ def approximate_fiducial_line_function(
             a latter version)
         targetStat : int, default=250
             Number of points per bin to aim to when using uniformCS binning algorithm
+        binSize_min: float, default = 0.1
+            The minimum size of mag bin. Set to 0.1 to avoid overfitting Main sequence
 
 
     Returns
@@ -977,7 +980,8 @@ def approximate_fiducial_line_function(
             mag,
             density,
             binSize=binSize,
-            targetStat = targetStat
+            targetStat = targetStat,
+            binSize_min = binSize_min
             )
     ff = interp1d(fiducialLine[1], fiducialLine[0], bounds_error=False, fill_value='extrapolate')
     return ff
@@ -991,6 +995,7 @@ def verticalize_CMD(
         percHigh : float = 99,
         allowMax : bool = False,
         targetStat : int = 250,
+        binSize_min: float = 0.1,
         ) -> Tuple[FARRAY_1D, Callable]:
     """
     Given some CMD fit an approximate fiducual line and use that to verticalize
@@ -1020,6 +1025,8 @@ def verticalize_CMD(
             future version)
         targetStat : int, default=250
             Number of points per bin to aim to when using uniformCS binning algorithm
+        binSize_min: float, default = 0.1
+            The minimum size of mag bin. Set to 0.1 to avoid overfitting Main sequence
 
 
     Returns
@@ -1039,7 +1046,8 @@ def verticalize_CMD(
             percLow=percLow,
             percHigh=percHigh,
             binSize=binSize,
-            targetStat = targetStat
+            targetStat = targetStat,
+            binSize_min = binSize_min
             )
     vColor = color - ff(mag)
     return vColor, ff
@@ -1377,7 +1385,7 @@ def measure_fiducial_lines(
         convexHullPoints,
         )
     density = normalize_density_magBin(color, mag, density, binSize=0.3)
-    vColor, ff = verticalize_CMD(color, mag, density, 'uniformCS', percLow, percHigh,targetStat=targetStat)
+    vColor, ff = verticalize_CMD(color, mag, density, binSize, percLow, percHigh,targetStat=targetStat, binSize_min = binSize_min)
 
     logger.info("Fitting fiducial line to density...")
     if piecewise_linear != False:
@@ -1418,7 +1426,7 @@ def measure_fiducial_lines(
                 convexHullPoints,
                 )
             density = normalize_density_magBin(color, mag, density, binSize=0.3, pbar=False)
-            vColor, ff = verticalize_CMD(color, mag, density, 'uniformCS', percLow, percHigh)
+            vColor, ff = verticalize_CMD(color, mag, density, binSize, percLow, percHigh, binSize_min = binSize_min)
             vColorBins, vMagBins, vDensityBins = bin_color_mag_density(
                     vColor,
                     mag,

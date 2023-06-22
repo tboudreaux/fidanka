@@ -161,14 +161,14 @@ def median_ridge_line_estimate(color,
                                cleaningIterations=10,
                                components=100,
                                normBinSize=0.3,
-                               targetStat=250,):
+                               targetStat=250):
     colorBins, magBins, densityBins = bin_color_mag_density(
             color,
             mag,
             density,
-            binSize,
-            max_Num_bin,
-            binSize_min,
+            binSize=binSize,
+            max_Num_bin=max_Num_bin,
+            binSize_min=binSize_min,
             targetStat=targetStat)
     colorBins, magBins, densityBins = clean_bins(
             colorBins,
@@ -273,6 +273,7 @@ def bin_color_mag_density(
             percHigh,
             percLow,
             binSize,
+            binSizeMin=binSize_min,
             targetStat=targetStat)
 
     colorBins = list()
@@ -356,10 +357,24 @@ def mag_bins(
     if binSize == 'uniformCS':
         srtedIDX = np.argsort(mag)
         sMag = mag[srtedIDX]
-        subs = np.floor(sMag.shape[0]/targetStat).astype(int)
-        binsM = np.array_split(sMag, subs)
-        binsLeft = np.array([np.min(b) for b in binsM])
-        binsRight = np.array([np.max(b) for b in binsM])
+        # subs = np.floor(sMag.shape[0]/targetStat).astype(int)
+        # binsM = np.array_split(sMag, subs)
+        # binsLeft = np.array([np.min(b) for b in binsM])
+        # binsRight = np.array([np.max(b) for b in binsM])
+        Num_star = len(sMag)
+        binsLeft = [sMag[0]]
+        binsRight = []
+        idx_left = 0
+        idx_right_count = idx_left + targetStat
+        idx_right_mag = np.searchsorted(sMag, binsLeft[-1] + binSizeMin)
+        idx_right_max = max(idx_right_count, idx_right_mag)
+        while idx_right_max < Num_star:
+            binsRight.append(sMag[idx_right_max])
+            binsLeft.append(sMag[idx_right_max])
+        binsLeft = np.array(binsLeft[:-1])
+        binsRight[-1] = Num_star
+        binsRight= np.array(binsRight)
+
     else:
         magRange = percentile_range(mag, percLow, percHigh)
         binsLeft = np.arange(magRange[1], magRange[0], binSize)
