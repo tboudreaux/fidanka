@@ -7,6 +7,14 @@
 <div align="center">
 
 [![Python - Linux](https://github.com/tboudreaux/fidanka/actions/workflows/python-build.yml/badge.svg)](https://github.com/tboudreaux/fidanka/actions/workflows/python-build.yml)
+[![python](https://img.shields.io/badge/Python-3.9-3776AB.svg?style=flat&logo=python&logoColor=white?style=for-the-badge)](https://www.python.org)
+[![python](https://img.shields.io/badge/Python-3.10-3776AB.svg?style=flat&logo=python&logoColor=white?style=for-the-badge)](https://www.python.org)
+[![python](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat&logo=python&logoColor=white?style=for-the-badge)](https://www.python.org)
+
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [![Forks](https://img.shields.io/github/forks/tboudreaux/fidanka.svg?style=for-the-badge)](https://github.com/tboudreaux/fidanka)
 [![Stars](https://img.shields.io/github/stars/tboudreaux/fidanka.svg?style=for-the-badge)](https://github.com/tboudreaux/fidanka)
