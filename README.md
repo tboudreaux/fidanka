@@ -46,10 +46,8 @@ git add <files>
 cz c
 ```
 
-## Notes
-(June 20th, 2023): I have tested this and it is easily installable on Mac OS 13.4. However, there seems to be some bug with out setup tools
-deals with external c libs and numpy which crops up in ubuntu. I will continue to work on this but as it stands currently
-you may have to manually point your pythonpath at the fidanka repo on linux distros.
+## Contributing
+We welcome any contributions made to this project. Please work in a fork and submit a pull request. We also request that you use the pre-commit hooks we have defined and commit using commitizen. This will help us keep a cleaner channelog. Finally, any contributors to this project are expected to behave in accordance with the code of conduct (code_of_conduct.md). Any violation of this will result in a ban on contributions and an evaluation of whether previous contributions should be purged.
 
 ## Examples
 
