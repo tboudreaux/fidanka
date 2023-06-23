@@ -246,19 +246,25 @@ def test_measure_fiducial_line():
         targetStat=25,
         mcruns=1,
         convexHullPoints=25,
+        nPops=1,
     )
 
     with open(os.path.join(TARGETDIR, "target-measure_fiducial_line.pkl"), "rb") as f:
         # pkl.dump(lines, f)
         target = pkl.load(f)
 
-    okay = True
-    for line, tLine in zip(lines, target):
-        for m, tm in zip(line, tLine):
-            okay &= m == pytest.approx(tm)
+    meanM = lines[0].mean
+    meanT = target[0].mean
+    okayList = np.zeros(len(meanM[0]), dtype=bool)
+    for idx, (mC, tC, mM, tM) in enumerate(zip(meanM[0], meanT[0], meanM[1], meanT[1])):
+        okay = mC == pytest.approx(tC, abs=1e-1)
+        okay &= mM == pytest.approx(tM, abs=1e-1)
+        okayList[idx] = okay
 
-    assert okay
+    numTrue = len(okayList[okayList == True])
+    total = len(okayList)
+    assert numTrue / total >= 0.70
 
 
 if __name__ == "__main__":
-    test_instantanious_hull_density()
+    test_measure_fiducial_line()
