@@ -8,8 +8,7 @@
 
 [![Python - Linux](https://github.com/tboudreaux/fidanka/actions/workflows/python-build.yml/badge.svg)](https://github.com/tboudreaux/fidanka/actions/workflows/python-build.yml)
 [![python](https://img.shields.io/badge/Python-3.9-3776AB.svg?style=flat&logo=python&logoColor=white?style=for-the-badge)](https://www.python.org)
-[![python](https://img.shields.io/badge/Python-3.10-3776AB.svg?style=flat&logo=python&logoColor=white?style=for-the-badge)](https://www.python.org)
-[![python](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat&logo=python&logoColor=white?style=for-the-badge)](https://www.python.org)
+[![codecov](https://codecov.io/gh/tboudreaux/fidanka/branch/master/graph/badge.svg?token=DQ5CUJ7WNA)](https://codecov.io/gh/tboudreaux/fidanka)
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
