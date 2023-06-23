@@ -7,6 +7,7 @@ from fidanka.fiducial.utils import percentile_range
 from fidanka.fiducial.utils import mag_bins, bin_color_mag_density
 from fidanka.fiducial.methods import plm
 from fidanka.fiducial.fiducialLine import fiducial_line
+from fidanka.ext import nearest_neighbors
 
 import numpy as np
 import pandas as pd
