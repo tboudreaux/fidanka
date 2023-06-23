@@ -36,7 +36,7 @@ jobs:
     - name: Test and Generate Report
       working-directory: ./tests/fidanka
       env:
-        FIDANKA_TEST_ROOT_DIR: ./tests/fidanka
+        FIDANKA_TEST_ROOT_DIR: .
       run: |
         coverage erase
         coverage run -m pytest
