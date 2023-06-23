@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v3
@@ -33,10 +33,13 @@ jobs:
       run: |
         # Load the flake8 config from setup.cfg
         flake8 .
-    - name: Test with pytest
+    - name: Test and Generate Report
       working-directory: ./tests/fidanka
+      env:
+        FIDANKA_TEST_ROOT_DIR: ./tests/fidanka
       run: |
-        echo $(ls)
-        chmod +u ./runTests.sh
-        ./runTests.sh
+        coverage erase
+        coverage run -m pytest
       shell: bash
+    - name: Upload Coverage to CodeCov
+      uses: codecov/codecov-action@v2
