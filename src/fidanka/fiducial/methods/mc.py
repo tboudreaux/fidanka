@@ -5,6 +5,8 @@ import numpy.typing as npt
 import emcee
 from multiprocessing import Pool
 
+from scipy.interpolate import interp1d
+
 IARRAY_1D = npt.NDArray[np.int32]
 
 FARRAY_1D = npt.NDArray[np.float64]
@@ -15,7 +17,7 @@ FARRAY_2D_4C = npt.NDArray[[FARRAY_1D, FARRAY_1D, FARRAY_1D, FARRAY_1D]]
 R2_VECTOR = npt.NDArray[[np.float64, np.float64]]
 
 
-def plm(color, mag, piecewise_linear, binsLeft, binsRight, i):
+def plm(color, mag, error1, error2, piecewise_linear, binsLeft, binsRight, i, allowMax):
     fiducial = np.zeros(shape=(binsLeft.shape[0], 5))
     masks = [
         ((mag >= binsLeft[i]) & (mag < binsRight[i])) for i in range(len(binsLeft))
