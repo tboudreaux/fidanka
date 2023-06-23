@@ -19,3 +19,4 @@ mnt/
 *.pyf
 dist/
 tags
+.coverage
