@@ -1,12 +1,21 @@
-# Fidanka
-[![Forks](https://img.shields.io/github/forks/tboudreaux/fidanka.svg?style=for-the-badge)](https://github.com/tboudreaux/fidanka)
-[![Stars](https://img.shields.io/github/stars/tboudreaux/fidanka.svg?style=for-the-badge)](https://github.com/tboudreaux/fidanka)
-Fidanka is an (hopefully) easy to use python package for doing science with globular clusters.
-Written by Emily M. Boudreaux and Martin Ying.
-
 <p align="center">
 	<img width="460" height="460" src="/assets/fidankaLogo.png">
 </p>
+
+---
+
+[![Forks](https://img.shields.io/github/forks/tboudreaux/fidanka.svg?style=for-the-badge)](https://github.com/tboudreaux/fidanka)
+
+[![Stars](https://img.shields.io/github/stars/tboudreaux/fidanka.svg?style=for-the-badge)](https://github.com/tboudreaux/fidanka)
+
+[![Python - Linux](https://github.com/tboudreaux/fidanka/actions/workflows/python-build.yml/badge.svg)](https://github.com/tboudreaux/fidanka/actions/workflows/python-build.yml)
+
+---
+
+# Fidanka
+Fidanka is an (hopefully) easy to use python package for doing science with globular clusters.
+Written by Emily M. Boudreaux and Martin Ying.
+
 
 ## Docs & Information
 The full API Documentation can be found <a href="https://tboudreaux.github.io/fidanka/">here</a>.
