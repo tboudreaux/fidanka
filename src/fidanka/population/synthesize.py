@@ -17,13 +17,13 @@ from collections.abc import Iterable
 
 from typing import Union, Tuple, List, Dict, Callable, Optional
 
-FILTERPATTERN = re.compile(r'(?:(?:ACS_WFC_(F\d{3}W)_MAG)|(F\d{3}W))')
+FILTERPATTERN = re.compile(r"(?:(?:ACS_WFC_(F\d{3}W)_MAG)|(F\d{3}W))")
 FARRAY_1D = npt.NDArray[np.float64]
 
+
 def mass_sample(
-        n : int,
-        mrange : Tuple[float, float] = (0.1,1),
-        alpha : float = -2.68) -> FARRAY_1D:
+    n: int, mrange: Tuple[float, float] = (0.1, 1), alpha: float = -2.68
+) -> FARRAY_1D:
     """
     Sample masses from a power law IMF.
 
@@ -49,14 +49,15 @@ def mass_sample(
     >>> mass_sample(10, mrange=(0.1,1), alpha=-2.68)
     """
     sample = np.zeros(n)
-    m1 = mrange[1]**(alpha+1) - mrange[0]**(alpha+1)
-    m2 = mrange[0]**(alpha+1)
-    powmass = 1/(alpha+1)
+    m1 = mrange[1] ** (alpha + 1) - mrange[0] ** (alpha + 1)
+    m2 = mrange[0] ** (alpha + 1)
+    powmass = 1 / (alpha + 1)
     for i in range(n):
-        xx = np.random.uniform(low=0,high=1)
-        sm = (m1*xx + m2)**powmass
+        xx = np.random.uniform(low=0, high=1)
+        sm = (m1 * xx + m2) ** powmass
         sample[i] = sm
     return sample
+
 
 def interpolate_eep_arrays(arr1, arr2, target, lower, upper):
     # Ensure arrays are numpy arrays
@@ -84,74 +85,65 @@ def interpolate_eep_arrays(arr1, arr2, target, lower, upper):
 
     return interpolated_arr
 
+
 def sum_mag(m1, m2):
-    return -2.5*np.log10(10**(-0.4*m1) + 10**(-0.4*m2))
+    return -2.5 * np.log10(10 ** (-0.4 * m1) + 10 ** (-0.4 * m2))
+
 
 def sum_err_mag(m1, m2, s1, s2):
-    a = np.exp(1.84207*m2)*s1**2
-    b = np.exp(1.84207*m1)*s2**2
-    c = (np.exp(0.921084*m1) + np.exp(0.921084*m2))**2
-    return (a+b)/c
+    a = np.exp(1.84207 * m2) * s1**2
+    b = np.exp(1.84207 * m1) * s2**2
+    c = (np.exp(0.921084 * m1) + np.exp(0.921084 * m2)) ** 2
+    return (a + b) / c
 
 
 class population:
-    def __init__(self,
-                 iso,
-                 alpha,
-                 bf,
-                 agePDF,
-                 n,
-                 minAge,
-                 maxAge,
-                 minMass,
-                 maxMass,
-                 artStarFuncs,
-                 distance,
-                 colorExcess,
-                 magName,
-                 bolometricCorrectionTables,
-                 Rv = 3.1,
-                 ):
-
-        self.Av = Rv*colorExcess
+    def __init__(
+        self,
+        iso,
+        alpha,
+        bf,
+        agePDF,
+        n,
+        minAge,
+        maxAge,
+        minMass,
+        maxMass,
+        artStarFuncs,
+        distance,
+        colorExcess,
+        magName,
+        bolometricCorrectionTables,
+        Rv=3.1,
+    ):
+        self.Av = Rv * colorExcess
         self.Rv = Rv
-        self.mu = 5*np.log10(distance) - 5
+        self.mu = 5 * np.log10(distance) - 5
 
         if isinstance(iso, str):
             self.iso = [read_iso(iso)]
             self.isoMeta = [read_iso_metadata(iso)]
-            # isoNP = dict()
-            # for age, df in iso.items():
-            #     isoNP[age] = df.values
-            # self.isoNP = [isoNP]
         elif isinstance(iso, list):
             self.iso = [read_iso(isoFile) for isoFile in iso]
             self.isoMeta = [read_iso_metadata(isoFile) for isoFile in iso]
-            # isoNPs = list()
-            # for isoFile in iso:
-                # isoNP = dict()
-                # for age, df in isoi.items():
-                    # isoNP[age] = df.values
-                    # isoNPs.append(isoNP)
-            # self.isoNP = isoNPs
 
         self._bolometricCorrectors = list()
         for iso, meta in zip(self.iso, self.isoMeta):
-            FeH = meta['[Fe/H]']
+            FeH = meta["[Fe/H]"]
             bc = BolometricCorrector(bolometricCorrectionTables, FeH)
             self._bolometricCorrectors.append(bc)
 
         for isoID, (iso, bc) in enumerate(zip(self.iso, self._bolometricCorrectors)):
             for age, df in iso.items():
-                print(f'Calculating bolometric corrections for {age} Gyr isochrone...')
+                print(f"Calculating bolometric corrections for {age} Gyr isochrone...")
                 mags = bc.apparent_mags(
-                        10**df['log_Teff'],
-                        df['log_g'],
-                        df['log_L'],
-                        Av=self.Av,
-                        Rv=self.Rv,
-                        mu=self.mu
-                        )
+                    10 ** df["log_Teff"],
+                    df["log_g"],
+                    df["log_L"],
+                    Av=self.Av,
+                    Rv=self.Rv,
+                    mu=self.mu,
+                )
                 bolCorrectedIso = pd.concat([df, mags], axis=1)
                 self.iso[isoID][age] = bolCorrectedIso
 
@@ -170,7 +162,7 @@ class population:
         self._effectiveWavelengths = list()
         self._nonFilterIndices = list()
         self._goodColumnNames = list()
-        self._completness = artStarFuncs.pop('Completness')
+        self._completness = artStarFuncs.pop("Completness")
         for cID, column in enumerate(self.header):
             match = re.search(FILTERPATTERN, column)
             if match:
@@ -184,12 +176,16 @@ class population:
                 self._nonFilterIndices.append(cID)
 
         self.distance = distance
-        self.reddening = reddening
+        self.reddening = colorExcess
         self._hasData = False
         self._data = None
         self._completnessCheckColumnID = self._goodColumnNames.index(magName)
-        self._completnessCheckColName = self._goodColumnNames[self._completnessCheckColumnID]
-        self._isoFilterCompletenessCheckColName = f"ACS_WFC_{self._completnessCheckColName}_MAG"
+        self._completnessCheckColName = self._goodColumnNames[
+            self._completnessCheckColumnID
+        ]
+        self._isoFilterCompletenessCheckColName = (
+            f"ACS_WFC_{self._completnessCheckColName}_MAG"
+        )
         self._mappingFunctions = self._generate_mapping_functions()
 
     def _generate_mapping_functions(self):
@@ -200,24 +196,29 @@ class population:
             sortedMasses = list()
             maxSize = 0
             for age in validAges:
-                sortedMasses.append(np.sort(iso[age]['initial_mass'].values))
+                sortedMasses.append(np.sort(iso[age]["initial_mass"].values))
                 maxSize = max(maxSize, len(sortedMasses[-1]))
 
             sortedAges = np.sort(validAges)
 
             apparentMags = np.empty((len(sortedAges), maxSize))
             for ageID, age in enumerate(sortedAges):
-                print(f"Age Point: {ageID}, with {len(sortedMasses[ageID])} to work on", end='')
+                print(
+                    f"Age Point: {ageID}, with {len(sortedMasses[ageID])} to work on",
+                    end="",
+                )
                 for massID, mass in enumerate(sortedMasses[ageID]):
                     isoAtAge = iso[age]
-                    isoAtAgeAndMass = isoAtAge[isoAtAge['initial_mass'] == mass]
-                    extracted = isoAtAgeAndMass[self._isoFilterCompletenessCheckColName].values
+                    isoAtAgeAndMass = isoAtAge[isoAtAge["initial_mass"] == mass]
+                    extracted = isoAtAgeAndMass[
+                        self._isoFilterCompletenessCheckColName
+                    ].values
                     if extracted.size == 0:
                         apparentMags[ageID, massID] = np.nan
                     else:
                         apparentMags[ageID, massID] = extracted[0]
-                print('\r', end='')
-            print('')
+                print("\r", end="")
+            print("")
 
             num_pairs = sum([len(mass_list) for mass_list in sortedMasses])
 
@@ -254,22 +255,24 @@ class population:
         # isoShiftedToDistRed = shift_full_iso(isoAtAge[:, self._goodFilterIdx], self.distance, self.reddening, self._effectiveWavelengths,
         #                                      self._goodColumnNames, self._responseFunctions)
 
-        massMap = isoAtAge[:,2]
+        massMap = isoAtAge[:, 2]
         sortedMasses = np.sort(massMap)
         magMap = isoShiftedToDistRed[:, self._completnessCheckColumnID]
-        completnessMap = interp1d(massMap, magMap, kind='linear', bounds_error=False, fill_value=np.nan)
+        completnessMap = interp1d(
+            massMap, magMap, kind="linear", bounds_error=False, fill_value=np.nan
+        )
         completness = lambda m, alpha: self._completness(completnessMap(m))
         resetMass = False
         mMin = massMap.min()
         mMax = massMap.max()
         if mass is None:
             resetMass = True
-            mass = sample_n_masses(1, completness,self.alpha,mMin,mMax)[0]
+            mass = sample_n_masses(1, completness, self.alpha, mMin, mMax)[0]
             # print("SELECTING MASS ", mass)
         else:
             if isinstance(mass, Iterable):
                 mass = mass[0]
-        lowerMass, upperMass = closest(isoAtAge[:,2], mass)
+        lowerMass, upperMass = closest(isoAtAge[:, 2], mass)
         if lowerMass == None:
             lowerMass = mMin
             upperMass = sortedMasses[1]
@@ -280,10 +283,12 @@ class population:
             lowerMass = sortedMasses[-2]
             print("Falling back on end of array for upper mass")
             print(f"Using masses {lowerMass} and {upperMass}")
-        lowerMassPoint = isoShiftedToDistRed[isoAtAge[:,2] == lowerMass]
-        upperMassPoint = isoShiftedToDistRed[isoAtAge[:,2] == upperMass]
+        lowerMassPoint = isoShiftedToDistRed[isoAtAge[:, 2] == lowerMass]
+        upperMassPoint = isoShiftedToDistRed[isoAtAge[:, 2] == upperMass]
         try:
-            targetSample = interpolate_arrays(lowerMassPoint, upperMassPoint, mass, lowerMass, upperMass)[0]
+            targetSample = interpolate_arrays(
+                lowerMassPoint, upperMassPoint, mass, lowerMass, upperMass
+            )[0]
         except AssertionError:
             print(lowerMassPoint)
             print(upperMassPoint)
@@ -294,17 +299,17 @@ class population:
             raise
 
         for rID, (ID, interpFunc) in enumerate(self.noiseFuncs.items()):
-            samples[idx][2+rID] = sum_mag(targetSample[rID], samples[idx][2+rID])
+            samples[idx][2 + rID] = sum_mag(targetSample[rID], samples[idx][2 + rID])
             if isSingle:
                 scale = interpFunc(targetSample[rID])
                 dist = np.random.normal(loc=0, scale=scale, size=1)
-                samples[idx][2+rID] += dist
-                samples[idx][2+len(self.noiseFuncs)+rID] = scale
+                samples[idx][2 + rID] += dist
+                samples[idx][2 + len(self.noiseFuncs) + rID] = scale
 
         if isPrimary:
             # Based on Milone et al. 2012 (A&A 537, A77)
             # Assume a flat mass ratio distribution
-            qMin = mMin/mass
+            qMin = mMin / mass
             q = np.random.uniform(qMin, 1, 1)
             primaryMass = mass
             secondaryMass = q * primaryMass
@@ -313,11 +318,11 @@ class population:
             for rID, (ID, interpFunc) in enumerate(self.noiseFuncs.items()):
                 scale = interpFunc(targetSample[rID])
                 dist = np.random.normal(loc=0, scale=scale, size=1)
-                samples[idx][2+rID] += dist
-                samples[idx][2+len(self.noiseFuncs)+rID] = scale
+                samples[idx][2 + rID] += dist
+                samples[idx][2 + len(self.noiseFuncs) + rID] = scale
             samples[idx][0] = primaryMass
             samples[idx][-2] = q
-            samples[idx][1] = (age + samples[idx][1])/2
+            samples[idx][1] = (age + samples[idx][1]) / 2
         else:
             if resetMass:
                 samples[idx][0] = mass
@@ -326,37 +331,40 @@ class population:
 
         samples[idx][-1] = binary
 
-
-
     def data(self, force=False):
         if not self._hasData or force:
-            ages = get_samples(self.n, self.age, domain=np.linspace(self.minAge, self.maxAge, 1000))
-            samples = np.zeros((self.n, 2*len(self._goodFilterIdx)+4))
+            ages = get_samples(
+                self.n, self.age, domain=np.linspace(self.minAge, self.maxAge, 1000)
+            )
+            samples = np.zeros((self.n, 2 * len(self._goodFilterIdx) + 4))
             for filterID, _ in enumerate(self._goodFilterIdx):
-                samples[:, 2+filterID] = np.inf
+                samples[:, 2 + filterID] = np.inf
             whichPop = np.random.randint(0, len(self.isoNP), self.n)
 
             for idx, (age, popI) in enumerate(zip(ages, whichPop)):
-                isBinary = np.random.choice([True, False], p=[self.bf, 1-self.bf])
+                isBinary = np.random.choice([True, False], p=[self.bf, 1 - self.bf])
                 self._sample(age, idx, popI, samples, binary=isBinary)
             self._data = samples
             self._hasData = True
         else:
             samples = self._data
 
-
         return samples
 
     def _resample_binaries(self):
         if self._hasData and self._data is not None:
             nb = self.bf * self.n
-            ns = (1-self.bf) * self.n
-            cns = np.sum(self._data[:,-1] == 0)
+            ns = (1 - self.bf) * self.n
+            cns = np.sum(self._data[:, -1] == 0)
             dns = ns - cns
-            rIndexies = np.random.choice(np.argwhere(self._data[:,-1]==0).flatten(), size=dns, replace=False)
+            rIndexies = np.random.choice(
+                np.argwhere(self._data[:, -1] == 0).flatten(), size=dns, replace=False
+            )
             if cns > 0:
-                ages = get_samples(dns, self.age, domain=np.linspace(self.minAge, self.maxAge, 1000))
-                samples = np.zeros((dns, 2*len(self._goodFilterIdx)+4))
+                ages = get_samples(
+                    dns, self.age, domain=np.linspace(self.minAge, self.maxAge, 1000)
+                )
+                samples = np.zeros((dns, 2 * len(self._goodFilterIdx) + 4))
                 whichPop = np.random.randint(0, len(self.isoNP), dns)
 
                 for idx, (rIDX, age, popI) in enumerate(zip(rIndexies, ages, whichPop)):
@@ -368,19 +376,19 @@ class population:
                 self._data = np.delete(self._data, rIndexies, axis=0)
             else:
                 pass
-            bIdx = np.argwhere(self._data[:,-1]==1).flatten()
+            bIdx = np.argwhere(self._data[:, -1] == 1).flatten()
             self._data = np.delete(self._data, bIdx, axis=0)
 
-            ages = get_samples(nb, self.age, domain=np.linspace(self.minAge, self.maxAge, 1000))
-            samples = np.zeros((nb, 2*len(self._goodFilterIdx)+4))
+            ages = get_samples(
+                nb, self.age, domain=np.linspace(self.minAge, self.maxAge, 1000)
+            )
+            samples = np.zeros((nb, 2 * len(self._goodFilterIdx) + 4))
             whichPop = np.random.randint(0, len(self.isoNP), nb)
 
             for idx, (age, popI) in enumerate(zip(ages, whichPop)):
                 self._sample(age, idx, popI, samples, binary=True)
 
             self._data = np.concatenate((self._data, samples), axis=0)
-
-
 
     def resample(self, bf=None):
         if not self._hasData:
@@ -392,7 +400,12 @@ class population:
         return self._data
 
     def to_pandas(self):
-        columnNames = ["Mass", "Age"] + self._goodColumnNames + [f"{name}_err" for name in self._goodColumnNames] + ['q', 'isBinary']
+        columnNames = (
+            ["Mass", "Age"]
+            + self._goodColumnNames
+            + [f"{name}_err" for name in self._goodColumnNames]
+            + ["q", "isBinary"]
+        )
         df = pd.DataFrame(self.data(), columns=columnNames)
         return df
 
