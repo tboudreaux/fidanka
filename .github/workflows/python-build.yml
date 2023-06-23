@@ -35,12 +35,11 @@ jobs:
         # Load the flake8 config from setup.cfg
         flake8 .
     - name: Test and Generate Report
-      working-directory: ./tests/fidanka
       env:
-        FIDANKA_TEST_ROOT_DIR: .
+        FIDANKA_TEST_ROOT_DIR: ./tests/fidanka/
       run: |
         coverage erase
-        coverage run -m pytest
+        coverage run --source=./src/fidanka -m pytest
         coverage json
       shell: bash
     - name: Upload Coverage to CodeCov
