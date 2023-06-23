@@ -41,6 +41,7 @@ jobs:
       run: |
         coverage erase
         coverage run -m pytest
+        coverage report -m
       shell: bash
     - name: Upload Coverage to CodeCov
       uses: codecov/codecov-action@v2
