@@ -371,6 +371,10 @@ def mag_bins(
         while idx_right_max < Num_star:
             binsRight.append(sMag[idx_right_max])
             binsLeft.append(sMag[idx_right_max])
+            idx_left = idx_right_max
+            idx_right_count = idx_left + targetStat
+            idx_right_mag = np.searchsorted(sMag, binsLeft[-1] + binSizeMin)
+            idx_right_max = max(idx_right_count, idx_right_mag)
         binsLeft = np.array(binsLeft[:-1])
         binsRight[-1] = Num_star
         binsRight= np.array(binsRight)
