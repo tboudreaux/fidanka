@@ -3,13 +3,16 @@ import numpy.typing as npt
 from typing import Callable, Tuple, Union
 from scipy.interpolate import interp1d
 import logging
+from tqdm import tqdm
+
+from scipy.optimize import minimize
 
 FARRAY_1D = npt.NDArray
 
+
 def inverse_cdf_sample(
-        f : Callable[[FARRAY_1D], FARRAY_1D],
-        x : FARRAY_1D = None
-        ) -> Callable[[FARRAY_1D], FARRAY_1D]:
+    f: Callable[[FARRAY_1D], FARRAY_1D], x: FARRAY_1D = None
+) -> Callable[[FARRAY_1D], FARRAY_1D]:
     """
     Generate a function that samples from the inverse CDF of a given function.
 
@@ -43,26 +46,20 @@ def inverse_cdf_sample(
     >>> inverse_cdf(np.random.random(10))
     """
     if x is None:
-        x = np.linspace(0,1,100000)
+        x = np.linspace(0, 1, 100000)
 
     y = f(x)
     cdf_y = np.cumsum(y)
-    cdf_y_norm = cdf_y/cdf_y.max()
+    cdf_y_norm = cdf_y / cdf_y.max()
 
-    inverse_cdf = interp1d(
-            cdf_y_norm,
-            x,
-            bounds_error=False,
-            fill_value='extrapolate'
-            )
+    inverse_cdf = interp1d(cdf_y_norm, x, bounds_error=False, fill_value="extrapolate")
 
     return inverse_cdf
 
+
 def get_samples(
-        n : int,
-        f : Callable[[FARRAY_1D], FARRAY_1D],
-        domain : FARRAY_1D = None
-        ) -> FARRAY_1D:
+    n: int, f: Callable[[FARRAY_1D], FARRAY_1D], domain: FARRAY_1D = None
+) -> FARRAY_1D:
     """
     Sample n values from a given function. The function does not have to be
     a normalized PDF as the function will be normalized before sampling.
@@ -95,10 +92,10 @@ def get_samples(
     shiftedSamples = inverse_cdf_sample(f, x=domain)(uniformSamples)
     return shiftedSamples
 
+
 def closest(
-        array : FARRAY_1D,
-        target : float
-        ) -> Tuple[Union[FARRAY_1D, None], Union[FARRAY_1D, None]]:
+    array: FARRAY_1D, target: float
+) -> Tuple[Union[FARRAY_1D, None], Union[FARRAY_1D, None]]:
     """
     Find the closest values above and below a given target in an array.
     If the target is in the array, the function returns the exact target value
@@ -153,14 +150,15 @@ def closest(
 
     return closest_lower, closest_upper
 
+
 def interpolate_arrays(
-        array_lower : npt.NDArray,
-        array_upper : npt.NDArray,
-        target : float,
-        lower : float,
-        upper : float,
-        joinCol : Union[int, None] = None
-        ) -> npt.NDArray:
+    array_lower: npt.NDArray,
+    array_upper: npt.NDArray,
+    target: float,
+    lower: float,
+    upper: float,
+    joinCol: Union[int, None] = None,
+) -> npt.NDArray:
     """
     Interpolate between two arrays. The arrays must have the same shape.
 
@@ -202,9 +200,9 @@ def interpolate_arrays(
         array_upper = np.array(array_upper)
 
     if joinCol is not None:
-        shared = np.intersect1d(array_lower[:,joinCol], array_upper[:,joinCol])
-        lowerMask = np.isin(array_lower[:,joinCol], shared)
-        upperMask = np.isin(array_upper[:,joinCol], shared)
+        shared = np.intersect1d(array_lower[:, joinCol], array_upper[:, joinCol])
+        lowerMask = np.isin(array_lower[:, joinCol], shared)
+        upperMask = np.isin(array_upper[:, joinCol], shared)
         array_lower = array_lower[lowerMask]
         array_upper = array_upper[upperMask]
     # Ensure both arrays have the same shape
@@ -219,7 +217,14 @@ def interpolate_arrays(
 
     return interpolated_array
 
-def get_logger(name, fileName='fidanka.log', level=logging.INFO, flevel=logging.INFO, clevel=logging.WARNING):
+
+def get_logger(
+    name,
+    fileName="fidanka.log",
+    level=logging.INFO,
+    flevel=logging.INFO,
+    clevel=logging.WARNING,
+):
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
@@ -231,7 +236,9 @@ def get_logger(name, fileName='fidanka.log', level=logging.INFO, flevel=logging.
         console_handler = logging.StreamHandler()
         console_handler.setLevel(clevel)
 
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         file_handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
 
@@ -241,3 +248,66 @@ def get_logger(name, fileName='fidanka.log', level=logging.INFO, flevel=logging.
     return logger
 
 
+def pfD(r, I):
+    """
+    Return a function which givex the perpendicular distance between a point and
+    a function evaluated at some point x
+
+    Parameters
+    ----------
+        r : np.ndarray[float64]
+            2-vector (x,y), some point
+        I : Callable
+            Function of a single parameter I(x) -> y.
+
+    Returns
+    -------
+        d : Callable
+            Function of form d(x) which gives the distance between r and I(x)
+    """
+    return lambda m: np.sqrt((I(m) - r[0]) ** 2 + (m - r[1]) ** 2)
+
+
+def measusre_perpendicular_distance(f1, f2, domain, pbar=False):
+    """
+    Measure the perpendicular distance between two functions
+    over a given domain.
+
+    Parameters
+    ----------
+        f1 : Callable
+            Function of a single parameter f1(x) -> y.
+        f2 : Callable
+            Function of a single parameter f2(x) -> y.
+        domain : np.ndarray[float64]
+            Domain over which to measure the distance.
+        pbar : bool, default=False
+            Show progress bar.
+
+    Returns
+    -------
+        minDist : np.ndarray[float64]
+            Minimum distance between the two functions over the domain.
+
+    Examples
+    --------
+    Let's measure the perpendicular distance between two functions.
+
+    >>> f1 = lambda x: x**2
+    >>> f2 = lambda x: x**3
+    >>> domain = np.linspace(0, 1, 100)
+    >>> minDist = measusre_perpendicular_distance(f1, f2, domain)
+
+    """
+    minDist = np.zeros(len(domain))
+    for idx, x in tqdm(enumerate(domain), disable=not pbar):
+        r0 = np.array([x, f1(x)])
+        r1 = np.array([x, f2(x)])
+        approxDist = np.sqrt((r0[0] - r1[0]) ** 2 + (r0[1] - r1[1]) ** 2)
+        d = pfD(r0, f2)
+        nearestPoint = minimize(d, x0=approxDist, method="Nelder-Mead")
+        if not nearestPoint.success:
+            print("Perpendicular Minimization Failed. No local Minima Identified.")
+        else:
+            minDist[idx] = d(nearestPoint.x[0])
+    return minDist

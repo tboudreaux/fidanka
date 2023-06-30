@@ -1,32 +1,81 @@
-# Fidanka
-Fidanka is an (hopefully) easy to use python package for doing science with globular clusters.
-Written by Emily M. Boudreaux and Martin Ying.
-
 <p align="center">
 	<img width="460" height="460" src="/assets/fidankaLogo.png">
 </p>
 
-## Docs
-API Docs can be found <a href="https://tboudreaux.github.io/fidanka/">here</a>
+---
+
+<div align="center">
+
+[![Python - Linux](https://github.com/tboudreaux/fidanka/actions/workflows/python-build.yml/badge.svg)](https://github.com/tboudreaux/fidanka/actions/workflows/python-build.yml)
+[![python](https://img.shields.io/badge/Python-3.9-3776AB.svg?style=flat&logo=python&logoColor=white?style=for-the-badge)](https://www.python.org)
+[![codecov](https://codecov.io/gh/tboudreaux/fidanka/branch/master/graph/badge.svg?token=DQ5CUJ7WNA)](https://codecov.io/gh/tboudreaux/fidanka)
+
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+[![Forks](https://img.shields.io/github/forks/tboudreaux/fidanka.svg?style=for-the-badge)](https://github.com/tboudreaux/fidanka)
+[![Stars](https://img.shields.io/github/stars/tboudreaux/fidanka.svg?style=for-the-badge)](https://github.com/tboudreaux/fidanka)
+
+</div>
+
+---
+
+# Fidanka
+Fidanka is an (hopefully) easy to use python package for doing science with globular clusters.
+Written by Emily M. Boudreaux and Martin Ying.
+
+
+## Docs & Information
+The full API Documentation can be found <a href="https://tboudreaux.github.io/fidanka/">here</a>.
+
+A short presentation which I've given on fidanka may be found <a href="https://algebrist.ddns.net/~tboudreaux/presentations/VAST/#/">here</a>
 
 ## Install
 
-### From Source
+### PyPi
+Fidnka will be avalible on PyPi soon; however, it is not currently avalible anywhere other than GitHub.
+
+### From Source (latest)
 
 ```bash
 git clone https://github.com/tboudreaux/fidanka.git
 cd fidanka
-pip install -e .
+pip install .
 ```
+
+### Development
+In order to develop for fidanka it will be helpful to also install a few more packages. We also recommend you work in a virtual environment.
+Moreover, you must work in your own fork of fidanka and issue pull requests. First fork fidanka on GitHub.
+```bash
+conda create --name fidankaDev python=3
+pip install pre-commit
+pip install commitizen
+git clone https://github.com/<your-username>/fidanka.git
+pip install -e .
+pre-commit install
+pre-commit autoupdate
+```
+While use commitizen is not required when contributing, it is highly encouraged.
+If you do use commitizen then the add commit workflow is as follows
+
+```bash
+git add <files>
+cz c
+```
+
+## Contributing
+We welcome any contributions made to this project. Please work in a fork and submit a pull request. We also request that you use the pre-commit hooks we have defined and commit using commitizen. This will help us keep a cleaner channelog. Finally, any contributors to this project are expected to behave in accordance with the code of conduct (code_of_conduct.md). Any violation of this will result in a ban on contributions and an evaluation of whether previous contributions should be purged.
 
 ## Examples
 
 ### Measuring the fiducial lines of a cluster with multiple populations
-Assuming you have your photometry stored in some datastructure (here I retrive it from a pickle
+Assuming you have your photometry stored in some data structure (here I retrieve it from a pickle
 as a pandas dataframe), and you have a prior that there are 2 populations within the
 cluster, you can measure those fiducial lines as follows
 
-This measurment will resample the data 1000 times and remeasure the fiducial lines each time
+This measurement will re-sample the data 1000 times and remeasure the fiducial lines each time
 in order to get confidence intervals and a mean.
 ```python
 from fidanka.fiducial import measure_fiducial_lines
@@ -64,8 +113,8 @@ pandas for the globular cluster NGC 2808 in your current working directory.
 Also imagine an isochrone called iso.txt (In the MIST format) in the current working directory. We
 can fit that isochrone to the photometry as follows. Also imagine we still
 have popA loaded from the previous example. Finally, imagine you have a series of bolometric
-correction tables in the current directory stored in a folder called "bolTables". 
-These tables should be in the format avalible on the MIST website.
+correction tables in the current directory stored in a folder called "bolTables".
+These tables should be in the format available on the MIST website.
 
 ```python
 from fidanka.isochrone.MIST import read_iso
@@ -113,8 +162,8 @@ get_logger("rootLoggerName", "testRun.log", clevel=logging.INFO)
 This will result in much more information being written to std out. The first
 argument is the name of the logger module and can be whatever you like. The second
 is the filename for the file handler. There are also keyword arguments
-clevel, flevel, and level which control the minum logger level to be written
-to the console, the file, and either respectivley.
+clevel, flevel, and level which control the minimum logger level to be written
+to the console, the file, and either respectively.
 
 
 ### Population Synthethis
@@ -152,11 +201,11 @@ pop = population(
     "F606W"
 )
 
-# Note that the population Synthethis runs when the code
+# Note that the population Synthesis runs when the code
 # gets here, NOT at population instantiation time
 # this can also be called with pop.data().
 # If this function is called multiple times the same results
-# will be returned for the same obeject as a cache is used
+# will be returned for the same object as a cache is used
 df = pop.to_pandas()
 pop.to_csv("TestPop.csv")
 ```

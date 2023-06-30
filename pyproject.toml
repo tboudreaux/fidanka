@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm", "wheel", "scikit-build", "cmake", "pybind11"]
+requires = ["numpy", "setuptools", "setuptools-scm", "wheel", "scikit-build", "cmake", "pybind11"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,7 +10,7 @@ authors = [
 	]
 description="Fiducual line generation and isochone fitting"
 readme="README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 keywords=["Globular Cluster"]
 license = { file = "LICENSE" }
 classifiers = [
@@ -27,10 +27,43 @@ dependencies = [
 	"tqdm",
 	"pandas",
 	"pybind11",
-	"emcee"
+	"emcee",
+  "pyTensor",
+  "pymc",
+  "scikit-learn"
 	]
-version = "0.5.2.1"
+dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://github.com/tboudreaux/fidanka"
 
+[tool.black]
+line-length = 88  # Specify the line length
+target-version = ['py39', 'py310', 'py311']  # Specify your Python version
+include = '\.pyi?$'
+exclude = '''  # Specify the files/dirs that should be ignored by the black formatter
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.6.0a0"
+version_files = [
+    "pyproject.toml:version",
+    "src/fidanka/__init__.py",
+    "CITATION.cff"
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "fidanka.__version__"}
