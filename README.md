@@ -95,8 +95,8 @@ fiducialLine = measure_fiducial_lines(
         mcruns=MC,
         nPops = 2
         )
-popA = fiducualLine[0]
-popB = fiducualLine[1]
+popA = fiducialLine[0]
+popB = fiducialLine[1]
 
 popAMean = popA.mean
 popA5th = popA.confidence(0.05)
