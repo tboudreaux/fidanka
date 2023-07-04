@@ -20,3 +20,4 @@ mnt/
 dist/
 tags
 .coverage
+*.log
