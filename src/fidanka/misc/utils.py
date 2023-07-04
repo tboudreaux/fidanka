@@ -6,6 +6,7 @@ import logging
 from tqdm import tqdm
 
 from scipy.optimize import minimize
+import matplotlib.pyplot as plt
 
 FARRAY_1D = npt.NDArray
 
@@ -265,7 +266,7 @@ def pfD(r, I):
         d : Callable
             Function of form d(x) which gives the distance between r and I(x)
     """
-    return lambda m: np.sqrt((I(m) - r[0]) ** 2 + (m - r[1]) ** 2)
+    return lambda m: np.sqrt((m - r[0]) ** 2 + (I(m) - r[1]) ** 2)
 
 
 def measusre_perpendicular_distance(f1, f2, domain, pbar=False):
@@ -311,3 +312,18 @@ def measusre_perpendicular_distance(f1, f2, domain, pbar=False):
         else:
             minDist[idx] = d(nearestPoint.x[0])
     return minDist
+
+
+if __name__ == "__main__":
+    f1 = lambda x: np.cos(x)
+    f2 = lambda x: np.sin(x)
+    domain = np.linspace(-2 * np.pi, 2 * np.pi, 100)
+    minDist = measusre_perpendicular_distance(f1, f2, domain)
+
+    # plt.plot(domain, f1(domain))
+    # plt.plot(domain, f2(domain))
+    # plt.xlim(-2*np.pi, 2*np.pi)
+    # plt.ylim(-2*np.pi, 2*np.pi)
+    # plt.ylim(-6.5, -5)
+    # plt.plot(domain, minDist)
+    # plt.show()
