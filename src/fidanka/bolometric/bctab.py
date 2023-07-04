@@ -1,4 +1,10 @@
-from fidanka.bolometric.load import load_bol_table, load_bol_table_metadata
+from fidanka.bolometric.load import (
+    fetch_MIST_bol_table,
+    load_bol_table,
+    load_bol_table_metadata,
+    get_MIST_paths_FeH,
+    fetch_MIST_bol_table,
+)
 from fidanka.bolometric.color import get_mags
 from fidanka.misc.utils import closest, interpolate_arrays
 from fidanka.misc.utils import get_logger
@@ -19,29 +25,28 @@ RKE = re.compile(r"Av=(\d+\.\d+):Rv=(\d+\.\d+)")
 class BolometricCorrector:
     def __init__(
         self,
-        paths: Union[List, Tuple],
+        paths: Union[str, List, Tuple],
         FeH: float,
         filters: Union[List, Tuple] = ["F606W", "F814W"],
+        bolTablePaths: Union[str, None] = None,
     ):
         self.logger = get_logger("fidanka.bolometric.BolometricCorrector")
+        self.bolmetricTableID = "unknown"
+        self.logger.info("Loading Bolometric Correction Tables...")
+        if isinstance(paths, str):
+            self.logger.info(f"Bolometric Correction table ID ({paths}) requested.")
+            ID, bolRoot = fetch_MIST_bol_table(paths, folder=bolTablePaths)
+            files = os.listdir(bolRoot)
+            paths = [os.path.join(bolRoot, f) for f in files]
+            self.bolmetricTableID = ID
+        else:
+            self.logger.info("Bolometric Corrction table paths provided.")
 
         self.filters = filters
         self.paths = paths
         self.tables = dict()
-        self.tableFeHs = np.empty(len(paths))
+        self.tableFeHs = get_MIST_paths_FeH(paths)
         self.FeH = FeH
-
-        self.logger.info("Loading FeH Tables...")
-        for idx, path in enumerate(paths):
-            tabFeH = re.search(r"feh([mp]\d+)", path).group(1)
-            if tabFeH[0] == "m":
-                sign = -1
-            else:
-                sign = 1
-            tabFehNS = tabFeH[1:]
-            decimal = sign * float(f"{tabFehNS[0]}.{tabFehNS[1:]}")
-            self.tableFeHs[idx] = decimal
-        self.logger.info("FeH tables loaded!")
 
         sortedPaths = [x for _, x in sorted(zip(self.tableFeHs, paths))]
         self.tableFeHs = np.sort(self.tableFeHs)
@@ -82,6 +87,7 @@ class BolometricCorrector:
                 lower, upper, self.FeH, self.FeHBounds[0], self.FeHBounds[1]
             )
         self.logger.info("FeH Tables Interperolated!")
+        self.logger.info("Bolometric Correction Tables Loaded!")
 
         self.logger.info("Intializing Cache...")
         self.Av = np.empty(len(self.upperBCTable))
@@ -210,14 +216,16 @@ class BolometricCorrector:
         return dustDistCorectedMags
 
     def __repr__(self):
-        return f"BolometricCorrector([Fe/H] : {self.FeH})"
+        return (
+            f"<BolometricCorrector([Fe/H] : {self.FeH}), ID: {self.bolmetricTableID}>"
+        )
 
 
 if __name__ == "__main__":
-    root = "/home/tboudreaux/d/Astronomy/GraduateSchool/Thesis/GCConsistency/NGC2808/bolTables/HSTWFC3/"
-    filenames = list(filter(lambda x: re.search("feh[mp]\d+", x), os.listdir(root)))
-    paths = list(map(lambda x: os.path.join(root, x), filenames))
-    bol = BolometricCorrector(paths, 1.0)
+    # root = "/home/tboudreaux/d/Astronomy/GraduateSchool/Thesis/GCConsistency/NGC2808/bolTables/HSTWFC3/"
+    # filenames = list(filter(lambda x: re.search("feh[mp]\d+", x), os.listdir(root)))
+    # paths = list(map(lambda x: os.path.join(root, x), filenames))
+    bol = BolometricCorrector("JWST", 1.0)
 
     Teff = np.array([5000])
     logg = np.array([2.0])
