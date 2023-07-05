@@ -31,13 +31,13 @@ class _endCorrector:
     sub-table
     """
 
-    def __init__(self, length):
+    def __init__(self, length: int):
         self.length = length
 
-    def start(self):
+    def start(self) -> int:
         return self.length
 
-    def end(self):
+    def end(self) -> int:
         return self.length
 
 
@@ -155,7 +155,56 @@ def load_sub_table_metadata(filename: str, pointer: int) -> Tuple[int, List[str]
     return len(filterNums), colNames
 
 
-def download_MIST_bol_table(ID: str, folder=None):
+def download_MIST_bol_table(ID: str, folder=None) -> Tuple[str, str]:
+    """
+    Download bolometric correction tables from the MIST
+    data-products site. Valid keys can be checked with
+    fidanka.bolometric.URLS.get_valid_bol_table_names().
+
+    By default files will be downloaded to ~/.fidanka/bol/MIST/
+    however, this can be changed using the folder keyword argument.
+    Note, this function will not extract or verify downloads.
+
+    If the file already exists then nothing will be downloaded.
+
+    Parameters
+    ----------
+        ID : str
+            Name of bol correction table to fetch. Valid names can be
+            checked using the fidanka.bolometric.URLS.get_valid_bol_table_names()
+            function
+        folder : Union[str, None], default=None
+            The folder to save bolometric correction tables too. By default
+            this will be ~/.fidanka/bol/MIST/
+
+    Returns
+    -------
+        filePath : str
+            The path to the downloaded file
+        folder : str
+            the folder where the file was saved to (same as the input
+            parameter folder)
+
+    Raises
+    ------
+        ValueError
+            If ID is not a key in the lookup_table.
+
+
+    Examples
+    --------
+    If you want to download the JWST bolometric correction tables to
+    the default directory
+
+    >>> download_MIST_bol_table("JWST")
+
+    then if you do
+
+    >>> ls ~/.fidanka/bol/MIST/
+    >>> Out[1]: JWST.tar.gz
+
+
+    """
     logger = get_logger("fidanka.bolometric.load.download_MIST_bol_table")
     if not folder:
         folder = os.path.join(os.path.expanduser("~"), ".fidanka", "bol", "MIST")
@@ -192,7 +241,112 @@ def download_MIST_bol_table(ID: str, folder=None):
     return filePath, folder
 
 
-def fetch_MIST_bol_table(ID: str, folder=None):
+def verify_MIST_bol_tables(paths: List[str]) -> bool:
+    """
+    Verify extracted files from the MIST bolometric correction
+    tables (based on their versions July 4th 2023). If all
+    of the files given in paths match the checksums stashed in
+    the fidanka package data then this function will return true
+    otherwise this will return false.
+
+    Parameters
+    ----------
+        paths : List[str]
+            List of paths to files. Each path must have a basename which exists within
+            the stashed checksum file. This should include every bolometric correction
+            table avalible from MIST as of July 4th 2023.
+
+    Returns
+    -------
+        okay : bool
+            flag defining paths as either verified or not. If all files in the paths
+            are both in the stashed checksums and the MD5 checksums of all files
+            in paths match, then this will be true. In all other senarios this will
+            return as false
+
+    Warns
+    -----
+        - If a file in paths is not found in the stashed checksums then a warning will
+          be raised.
+    """
+    logger = get_logger("fidanka.bolometric.load.verify_MIST_bol_table")
+    logger.info("Loading stashed checksums...")
+    with pkg.path(ext_data, "checksums") as checksumPath:
+        with open(checksumPath, "r") as f:
+            checksums = f.read().split("\n")
+    checksums = [x for x in checksums if len(x.lstrip()) > 0]
+    checksums = [x for x in checksums if x.lstrip()[0] != "#"]
+    logger.info("Stashed checksums loaded!")
+    okay = True
+    logger.info("Checking paths against stashed checksums...")
+    for path in paths:
+        file = os.path.basename(path)
+        line = [x for x in checksums if file in x]
+        if len(line) != 1:
+            logger.warn(f"File {path} not identified in checksum stash!")
+            return False
+        checksum = line[0].split(":")[1]
+        with open(path, "rb") as f:
+            hexdigest = hashlib.md5(f.read()).hexdigest()
+        okay &= hexdigest == checksum
+        if hexdigest != checksum:
+            logger.warn(
+                f"File {path} checksum {hexdigest} does not match stashed checksum {checksum}!"
+            )
+    return okay
+
+
+def fetch_MIST_bol_table(ID: str, folder=None) -> Tuple[str, str]:
+    """
+    Fetch (download, extract, and verify) bolometric correction tables for a given
+    MIST table ID (valid names can be checked with
+    fidanka.bolometric.URLS.get_valid_bol_table_names())
+
+    First, a check will be done to check if files for a given ID have already
+    been downloaded and extracted to <folder>. If so they will have their checksums
+    validated. If all checks passed then the function will stop here.
+
+    If some of the checks fail then the tarball will be redownloaded from
+    the MIST website, these tarballs will then be extracted to some folder
+    ~/.fidanka/bol/MIST/<ID> (or more generally <folder>/<ID>).
+
+    Parameters
+    ----------
+        ID : str
+            Name of bol correction table to fetch. Valid names can be
+            checked using the fidanka.bolometric.URLS.get_valid_bol_table_names()
+            function
+        folder : Union[str, None], default=None
+            The folder to save bolometric correction tables too. By default
+            this will be ~/.fidanka/bol/MIST/
+
+    Returns
+    -------
+        ID : str
+            The MIST id requested
+        sfp : str
+            Path to the "subfolder" where files are extracted too. This will
+            be <folder>/<ID>. By default then ~/.fidanka/bol/MIST/<ID>
+
+    Warnings
+    --------
+        - If the bolometric correction tables checksums cannot be validated after
+          being downloaded and extracted
+
+    Examples
+    --------
+    If you want to download the JWST bolometric correction tables to
+    the default directory
+
+    >>> fetch_MIST_bol_table("JWST")
+
+    then if you do
+
+    >>> ls ~/.fidanka/bol/MIST/JWST
+
+    you should see all of the JWST bolometric correction tables, named like
+    feh[m|p][0-9]{3}.JWST
+    """
     logger = get_logger("fidanka.bolometric.load.fetch_MIST_bol_table")
     path, folder = download_MIST_bol_table(ID, folder=folder)
     subFolder = os.path.join(os.path.basename(path).split(".")[0])
@@ -221,35 +375,7 @@ def fetch_MIST_bol_table(ID: str, folder=None):
     return ID, sfp
 
 
-def verify_MIST_bol_tables(paths):
-    logger = get_logger("fidanka.bolometric.load.verify_MIST_bol_table")
-    logger.info("Loading stashed checksums...")
-    with pkg.path(ext_data, "checksums") as checksumPath:
-        with open(checksumPath, "r") as f:
-            checksums = f.read().split("\n")
-    checksums = [x for x in checksums if len(x.lstrip()) > 0]
-    checksums = [x for x in checksums if x.lstrip()[0] != "#"]
-    logger.info("Stashed checksums loaded!")
-    okay = True
-    logger.info("Checking paths against stashed checksums...")
-    for path in paths:
-        file = os.path.basename(path)
-        line = [x for x in checksums if file in x]
-        if len(line) != 1:
-            logger.warn(f"File {path} not identified in checksum stash!")
-            return False
-        checksum = line[0].split(":")[1]
-        with open(path, "rb") as f:
-            hexdigest = hashlib.md5(f.read()).hexdigest()
-        okay &= hexdigest == checksum
-        if hexdigest != checksum:
-            logger.warn(
-                f"File {path} checksum {hexdigest} does not match stashed checksum {checksum}!"
-            )
-    return okay
-
-
-def get_MIST_paths_FeH(paths):
+def get_MIST_paths_FeH(paths: List[str]):
     tableFeHs = np.empty(len(paths))
     for idx, path in enumerate(paths):
         tabFeH = re.search(r"feh([mp]\d+)", path).group(1)

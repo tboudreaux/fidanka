@@ -20,6 +20,12 @@ from typing import Union, Tuple, List, Dict, Callable, Optional
 FILTERPATTERN = re.compile(r"(?:(?:ACS_WFC_(F\d{3}W)_MAG)|(F\d{3}W))")
 FARRAY_1D = npt.NDArray[np.float64]
 
+# TODO: Updated module to use logger not print
+# TODO: Make the artificial star test suite more complete
+#       Impliment artstar test class which can take multiple
+#       generators. Then the population object just takes
+#       that object.
+
 
 def mass_sample(
     n: int, mrange: Tuple[float, float] = (0.1, 1), alpha: float = -2.68
@@ -116,6 +122,7 @@ class population:
         bolometricCorrectionTables,
         Rv=3.1,
     ):
+        # TODO: Add default arguments so that most of these do not have do be set everytime
         self.Av = Rv * colorExcess
         self.Rv = Rv
         self.mu = 5 * np.log10(distance) - 5
@@ -283,6 +290,8 @@ class population:
             lowerMass = sortedMasses[-2]
             print("Falling back on end of array for upper mass")
             print(f"Using masses {lowerMass} and {upperMass}")
+
+        # TODO: Updated to use the bolometric corrector directly
         lowerMassPoint = isoShiftedToDistRed[isoAtAge[:, 2] == lowerMass]
         upperMassPoint = isoShiftedToDistRed[isoAtAge[:, 2] == upperMass]
         try:
