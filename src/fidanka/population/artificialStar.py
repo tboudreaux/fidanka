@@ -4,6 +4,7 @@ from typing import Callable, Union, List, Dict
 
 from scipy.interpolate import interp1d
 import pandas as pd
+import difflib
 
 
 class artificialStar:
@@ -23,8 +24,53 @@ class artificialStar:
 
         ...
 
-    def completness(self, mag: float, filter: str) -> float:
-        ...
+    @property
+    def shared_system_name(self) -> str:
+        differ = difflib.Differ()
+        sharedSystemList = list()
+        for filterA in self.filters:
+            for filterB in self.filters:
+                if filterA != filterB:
+                    intersection = differ.compare(filterA, filterB)
+                    sharedSystemList.append(list(intersection))
+
+        sharedSystemNameSet = set(sharedSystemList[0])
+        for intersection in sharedSystemList[1:]:
+            sharedSystemNameSet = sharedSystemNameSet & set(intersection)
+
+        ids = list()
+        chars = list()
+        for sharedSystemNameChar in sharedSystemNameSet:
+            char = sharedSystemNameChar.lstrip()
+            ids.append(self.filters[0].index(char))
+            chars.append(char)
+        sharedSystemName = "".join(
+            map(lambda x: x[0], sorted(zip(chars, ids), key=lambda x: x[1]))
+        )
+        return sharedSystemName
+
+    def _gen_completness_functions(self, threshold: float = 0.02):
+        assert isinstance(
+            self._df, pd.DataFrame
+        ), "Unknown error, self._df not loaded properly"
+        sharedSystemName = self.shared_system_name
+        groundFilters = [x for x in self._df.columns if "ground" in x]
+        matchedFilters = list()
+        for theoreticalFilter in self.filters:
+            for observedFilter in groundFilters:
+                if theoreticalFilter.strip(sharedSystemName) == observedFilter.strip(
+                    "ground"
+                ):
+                    matchedFilters.append((theoreticalFilter, observedFilter))
+        for matchedFilter in matchedFilters:
+            compName = f"{matchedFilter[0]} - {matchedFilter[1]}"
+            self._df[compName] = (
+                self._df[matchedFilter[0]] - self._df[matchedFilter[1]]
+            ) / self._df[matchedFilter[0]]
+            self._df[f"{matchedFilter[0]}recovered"] = (
+                True if self._df[compName] < threshold else False
+            )
+        print(self._df)
 
     def err(self, mag: float, filter: str) -> float:
         assert (
@@ -49,6 +95,7 @@ class artificialStar:
                 self._err_funcs[columnName] = interp1d(
                     self._df[columnName].values, self._df[followingColumn].values
                 )
+        self._gen_completness_functions()
         self.generated = True
         return self.generated
 
