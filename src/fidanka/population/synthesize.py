@@ -182,20 +182,24 @@ class population:
         self.mu: float = 5 * np.log10(distance) - 5
         self.alpha: float = alpha
         self.bf: float = bf
+        self.minMass: float = minMass
+        self.maxMass: float = maxMass
 
         self.age = agePDF
         self.n = n
         self.minAge = minAge
         self.maxAge = maxAge
-        self.minMass = minMass
-        self.maxMass = maxMass
 
         self.iso, self.isoMeta = self._clean_input_isos(isoPaths)
+        self.ages = np.array(list(self.iso[0].keys()))
+
         self._bolometricCorrectors = [
             BolometricCorrector(bolometricCorrectionTables, meta["[Fe/H]"])
             for meta in self.isoMeta
         ]
 
+        # overwrite the theoretical isochrone with a bolometrically corrected version
+        self.isoNP = list()
         for isoID, (iso, bc) in enumerate(zip(self.iso, self._bolometricCorrectors)):
             for age, df in iso.items():
                 self._logger.info(
@@ -211,9 +215,12 @@ class population:
                 )
                 bolCorrectedIso = pd.concat([df, mags], axis=1)
                 self.iso[isoID][age] = bolCorrectedIso
+                self.isoNP.append(bolCorrectedIso.values)
 
-        self.ages = np.array(list(self.iso[0].keys()))
         self.header = list(self.iso[0][self.ages[0]].columns)
+
+        # TODO: This is where the code is going to need to have major changes in order
+        # to comply with the new artificial star obect
         self._goodFilterIdx = list()
         self.noiseFuncs = dict()
         self._effectiveWavelengths = list()
@@ -266,6 +273,8 @@ class population:
 
         return iso, isoMeta
 
+    # TODO: This function is likely not needed anymore. Assuming all completness
+    # estimates can be moved to the end of the population synthethis.
     def _generate_mapping_functions(self):
         mappingFunctions = list()
         for isoID, iso in enumerate(self.iso):
@@ -313,6 +322,46 @@ class population:
             Z = LinearNDInterpolator(input_coords, output_values)
             mappingFunctions.append(Z)
         return mappingFunctions
+
+    def _sample_new(self, age, popIndex, binary=False, mass=None, level=0):
+        # TODO: Optimize age interpolation, this likeley can be cached to
+        # save interpolaion time.
+        younger, older = closest(self.ages, age)
+        youngerIso = self.isoNP[popIndex][younger]
+        olderIso = self.isoNP[popIndex][older]
+        # TODO: fix typing here.
+        isoAtAge = interpolate_eep_arrays(youngerIso, olderIso, age, younger, older)
+
+        massMap = isoAtAge[:, 2]
+        mMin, mMax = massMap.min(), massMap.max()
+        sortedMasses = np.sort(massMap)
+        mass = sample_n_masses(1, self.alpha, mMin=mMin, mMax=mMax)[0]
+        lowerMass, upperMass = closest(massMap, mass)
+        if lowerMass == None:
+            lowerMass = mMin
+            upperMass = sortedMasses[1]
+            self._logger.info("Falling back on end of array for lower mass")
+            self._logger.info(f"Using masses {lowerMass} and {upperMass}")
+        if upperMass == None:
+            upperMass = mMax
+            lowerMass = sortedMasses[-2]
+            self._logger.info("Falling back on end of array for upper mass")
+            self._logger.info(f"Using masses {lowerMass} and {upperMass}")
+        isoBelowMass = self.isoNP[massMap == lowerMass]
+        isoAboveMass = self.isoNP[massMap == upperMass]
+        isoAtMass = interpolate_arrays(
+            isoBelowMass, isoAboveMass, mass, lowerMass, upperMass
+        )[0]
+
+        # Sample Secondary if binary
+        if binary:
+            qMin = mMin / mass
+            q = np.random.uniform(qMin, 1, 1)
+            primaryMass = mass
+            secondaryMass = q * primaryMass
+            secondary = self._sample_new(
+                age, popIndex, binary=False, mass=secondaryMass, level=level + 1
+            )
 
     def _sample(self, age, idx, popI, samples, binary=False, mass=None):
         isPrimary = False

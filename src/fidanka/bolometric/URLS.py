@@ -44,15 +44,3 @@ def get_valid_bol_table_names():
 
 def get_valid_bol_table_URLS():
     return [x[1] for x in lookup_table.items()]
-
-
-# # TODO: Automate the makeing of this checksum dict so that the contents of a download mist table
-# #       may be automatically checked if they are okay.
-# checksums ={
-#         'JWST':
-#         {
-#             'fehm0': 'sdfjhasdfjasf',
-#             ...
-#             },
-#         ...
-#         }

@@ -1,7 +1,8 @@
+from collections.abc import Sequence
 from warnings import filters
 from fidanka.misc.utils import get_logger
 
-from typing import Callable, Union, List, Dict
+from typing import Callable, Union, List, Dict, Tuple
 
 from scipy.interpolate import interp1d
 import pandas as pd
@@ -17,6 +18,7 @@ class artificialStar:
         self._filters: List[str] = list()
         self._err_funcs: Dict[str, Callable[[float], float]] = dict()
         self._completness_functions: Dict[str, Callable[[float], float]] = dict()
+        self._alias: Dict[str, List[str]] = dict()
 
         if calibrated_file:
             self.from_calibrated_file(calibrated_file)
@@ -102,6 +104,31 @@ class artificialStar:
                 binMeanMag, binMeanCompletness
             )
 
+    def _resolve_filter_name(self, name: str) -> str:
+        """
+        Given a filter name (which may either be in the artificial star
+        test file or an alias defined by the user) resolve this to a name
+        which is actually in the artificial star test.
+
+        Parameters
+        ----------
+            name : str
+                name of filter, either the filter name from the artificial star
+                test file or a user defined alias
+
+        Returns
+        -------
+            trueName : str
+                Resolved name as it appears in the artificial star test file
+                column names.
+            False
+                if name is unable to be resolved
+        """
+        for trueName, aliasNames in self.aliases.items():
+            if name in aliasNames:
+                return trueName
+        raise KeyError(f"Unable to resolve filter name {filter}")
+
     def err(self, mag: float, filter: str) -> float:
         """
         Get the estimate photometric uncertainty from calibrated arificial star
@@ -123,10 +150,8 @@ class artificialStar:
         assert (
             self.generated
         ), "Must pass calibrated artificial star test before evaluating errors."
-        assert (
-            filter in self._filters
-        ), f"Requested filter {filter} not in list of identified filters {self._filters}"
-        return self._err_funcs[filter](mag)
+        resolvedFilterName = self._resolve_filter_name(filter)
+        return self._err_funcs[resolvedFilterName](mag)
 
     def completness(self, mag: float, filter: str) -> float:
         """
@@ -148,10 +173,8 @@ class artificialStar:
         assert (
             self.generated
         ), "Must pass calibrated artificial star test before evaluating errors."
-        assert (
-            filter in self._filters
-        ), f"Requested filter {filter} not in list of identified filters {self._filters}"
-        return self._completness_functions[filter](mag)
+        resolvedFilterName = self._resolve_filter_name(filter)
+        return self._completness_functions[resolvedFilterName](mag)
 
     @property
     def filters(self) -> List[str]:
@@ -168,6 +191,41 @@ class artificialStar:
                 your datafiles to work in accordance with it.
         """
         return self._filters
+
+    @property
+    def aliases(self) -> Dict[str, List[str]]:
+        return self._alias
+
+    def add_filter_alias(
+        self,
+        filterNames: Union[str, Sequence[str]],
+        aliasNames: Union[str, Sequence[str]],
+    ) -> Dict[str, List[str]]:
+        """
+        Add an alias to a filter name which can be used by other functions when looking
+        to match photometric filters
+
+        Parameters
+        ----------
+            filterName : Union[str, Sequence[str]]
+                List of, or single, filter name(s) (as auto identified, which may be checked with self.filters)
+                which you which to add an alias to.
+            aliasNames : Union[str, Sequenace[str]]
+                List of alias which you wish to add. Can only add one alias to a filter at a time but may add aliass to multiple filters simultaniously. That is to sat if you have set filterNames = ["Vvege", "Ivega"] then aliasNames may be set to ["F606W", "F814W"].
+
+        Returns
+        -------
+            aliases : Dict[str, List[str]]
+                A dictionary defining all the currently defined aliases. This can also be checked
+                using self.aliases
+        """
+        filterNames = [filterNames] if isinstance(filterNames, str) else filterNames
+        aliasNames = [aliasNames] if isinstance(aliasNames, str) else aliasNames
+
+        for filterName, alias in zip(filterNames, aliasNames):
+            self._alias[filterName].append(alias)
+
+        return self.aliases
 
     def from_calibrated_file(self, path: str, **kwargs) -> bool:
         """
@@ -195,6 +253,7 @@ class artificialStar:
         for columnName, followingColumn in zip(self._df.columns, self._df.columns[1:]):
             if "err" in followingColumn:
                 self._filters.append(columnName)
+                self._alias[columnName] = [columnName]
                 self._err_funcs[columnName] = interp1d(
                     self._df[columnName].values, self._df[followingColumn].values
                 )
@@ -210,3 +269,5 @@ class artificialStar:
 if __name__ == "__main__":
     artStar = artificialStar()
     artStar.from_calibrated_file("~/Downloads/NGC2808A.XYVIQ.cal.zpt", sep=r"\s+")
+    artStar.add_filter_alias("Vvega", "F606W")
+    print(artStar.aliases)
