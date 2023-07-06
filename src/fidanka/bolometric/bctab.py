@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from fidanka.bolometric.load import (
     fetch_MIST_bol_table,
     load_bol_table,
@@ -18,6 +19,7 @@ from numpy import typing as npt
 from hashlib import sha256
 
 from typing import Dict, List, Union, Tuple
+from collections.abc import Sequence
 
 RKE = re.compile(r"Av=(\d+\.\d+):Rv=(\d+\.\d+)")
 
@@ -25,7 +27,7 @@ RKE = re.compile(r"Av=(\d+\.\d+):Rv=(\d+\.\d+)")
 class BolometricCorrector:
     def __init__(
         self,
-        paths: Union[str, List, Tuple],
+        paths: Union[str, Sequence[str]],
         FeH: float,
         filters: Union[List, Tuple] = ["F606W", "F814W"],
         bolTablePaths: Union[str, None] = None,

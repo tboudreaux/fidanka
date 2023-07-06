@@ -59,6 +59,7 @@ class artificialStar:
         sharedSystemName = "".join(
             map(lambda x: x[0], sorted(zip(chars, ids), key=lambda x: x[1]))
         )
+        self._logger.info(f"Identified photometric system : {sharedSystemName}")
         return sharedSystemName
 
     def _gen_completness_functions(
@@ -209,6 +210,3 @@ class artificialStar:
 if __name__ == "__main__":
     artStar = artificialStar()
     artStar.from_calibrated_file("~/Downloads/NGC2808A.XYVIQ.cal.zpt", sep=r"\s+")
-    print(artStar.filters)
-    print(artStar.err(20, "Vvega"))
-    print(artStar)

@@ -1,7 +1,7 @@
 from fidanka.isochrone.isochrone import shift_full_iso
 from fidanka.population.utils import sample_n_masses
 from fidanka.bolometric import BolometricCorrector
-from fidanka.misc.utils import closest, interpolate_arrays, get_samples
+from fidanka.misc.utils import closest, interpolate_arrays, get_samples, get_logger
 from fidanka.isochrone.MIST import read_iso, read_iso_metadata
 
 
@@ -16,6 +16,7 @@ from scipy.interpolate import interp1d, LinearNDInterpolator
 from collections.abc import Iterable
 
 from typing import Union, Tuple, List, Dict, Callable, Optional
+from collections.abc import Sequence
 
 FILTERPATTERN = re.compile(r"(?:(?:ACS_WFC_(F\d{3}W)_MAG)|(F\d{3}W))")
 FARRAY_1D = npt.NDArray[np.float64]
@@ -65,7 +66,12 @@ def mass_sample(
     return sample
 
 
-def interpolate_eep_arrays(arr1, arr2, target, lower, upper):
+def interpolate_eep_arrays(
+    arr1: Sequence, arr2: Sequence, target: float, lower: float, upper: float
+) -> Sequence:
+    # TODO: Figure out if this function is still needed or if it has been superseeded by the interpolate
+    # array function
+
     # Ensure arrays are numpy arrays
     arr1 = np.array(arr1)
     arr2 = np.array(arr2)
@@ -92,57 +98,109 @@ def interpolate_eep_arrays(arr1, arr2, target, lower, upper):
     return interpolated_arr
 
 
-def sum_mag(m1, m2):
+def sum_mag(m1: float, m2: float) -> float:
+    """
+    Take the sum of two magnitudes.
+
+    Parameters
+    ----------
+        m1 : float
+            Magnitude of object 1
+        m2 : float
+            Magnitude of object 2
+
+    Returns
+    -------
+        sumMagg : float
+            Sum of magnitude m1 + m2 taken properly in log space.
+    """
     return -2.5 * np.log10(10 ** (-0.4 * m1) + 10 ** (-0.4 * m2))
 
 
-def sum_err_mag(m1, m2, s1, s2):
+def sum_err_mag(m1: float, m2: float, s1: float, s2: float) -> float:
+    """
+    Find the sum of the errors of two magnitudes (general sum of uncertantiies
+    in log_2.5 space)
+
+    Parameters
+    ----------
+        m1 : float
+            Magnitude of object 1
+        m2 : float
+            Magnitude of object 2
+        s1 : float
+            One sigma uncertantiies of magnitude of object 1
+        s2 : float
+            One sigma uncertantiies of magnitude of object 2
+
+    Returns
+    -------
+        summErr : float
+            one sigma uncertantiies on m1+m2
+    """
     a = np.exp(1.84207 * m2) * s1**2
     b = np.exp(1.84207 * m1) * s2**2
     c = (np.exp(0.921084 * m1) + np.exp(0.921084 * m2)) ** 2
     return (a + b) / c
 
 
+# TODO: Change this to use cluster mass instead of total cluster membership
+# Note, that this is not observed cluster mass, rather it is total cluster
+# mass. this means that completness should come at the very end instead of
+# as the begining.
+
+
+# TODO: Find a more elegant manner to deal with age. Should there be an age
+# object? One which may include both the PDF as well as the min and max
+# age? It seems very inellegant to have to pass those three independently.
 class population:
     def __init__(
         self,
-        iso,
-        alpha,
-        bf,
+        isoPaths: Union[str, Sequence[str]],
+        alpha: float,
+        bf: float,
         agePDF,
         n,
         minAge,
         maxAge,
-        minMass,
-        maxMass,
+        minMass: float,
+        maxMass: float,
         artStarFuncs,
-        distance,
-        colorExcess,
+        distance: float,
+        colorExcess: float,
         magName,
-        bolometricCorrectionTables,
+        bolometricCorrectionTables: Union[str, Sequence[str]],
         Rv=3.1,
     ):
         # TODO: Add default arguments so that most of these do not have do be set everytime
-        self.Av = Rv * colorExcess
-        self.Rv = Rv
-        self.mu = 5 * np.log10(distance) - 5
+        self._logger = get_logger("fidanka.population.synthesize.population")
 
-        if isinstance(iso, str):
-            self.iso = [read_iso(iso)]
-            self.isoMeta = [read_iso_metadata(iso)]
-        elif isinstance(iso, list):
-            self.iso = [read_iso(isoFile) for isoFile in iso]
-            self.isoMeta = [read_iso_metadata(isoFile) for isoFile in iso]
+        self.distance: float = distance
+        self.reddening: float = colorExcess
+        self.Av: float = Rv * colorExcess
+        self.Rv: float = Rv
+        self.mu: float = 5 * np.log10(distance) - 5
+        self.alpha: float = alpha
+        self.bf: float = bf
 
-        self._bolometricCorrectors = list()
-        for iso, meta in zip(self.iso, self.isoMeta):
-            FeH = meta["[Fe/H]"]
-            bc = BolometricCorrector(bolometricCorrectionTables, FeH)
-            self._bolometricCorrectors.append(bc)
+        self.age = agePDF
+        self.n = n
+        self.minAge = minAge
+        self.maxAge = maxAge
+        self.minMass = minMass
+        self.maxMass = maxMass
+
+        self.iso, self.isoMeta = self._clean_input_isos(isoPaths)
+        self._bolometricCorrectors = [
+            BolometricCorrector(bolometricCorrectionTables, meta["[Fe/H]"])
+            for meta in self.isoMeta
+        ]
 
         for isoID, (iso, bc) in enumerate(zip(self.iso, self._bolometricCorrectors)):
             for age, df in iso.items():
-                print(f"Calculating bolometric corrections for {age} Gyr isochrone...")
+                self._logger.info(
+                    f"Calculating bolometric corrections for {age} Gyr isochrone..."
+                )
                 mags = bc.apparent_mags(
                     10 ** df["log_Teff"],
                     df["log_g"],
@@ -154,14 +212,6 @@ class population:
                 bolCorrectedIso = pd.concat([df, mags], axis=1)
                 self.iso[isoID][age] = bolCorrectedIso
 
-        self.alpha = alpha
-        self.bf = bf
-        self.age = agePDF
-        self.n = n
-        self.minAge = minAge
-        self.maxAge = maxAge
-        self.minMass = minMass
-        self.maxMass = maxMass
         self.ages = np.array(list(self.iso[0].keys()))
         self.header = list(self.iso[0][self.ages[0]].columns)
         self._goodFilterIdx = list()
@@ -182,8 +232,6 @@ class population:
             else:
                 self._nonFilterIndices.append(cID)
 
-        self.distance = distance
-        self.reddening = colorExcess
         self._hasData = False
         self._data = None
         self._completnessCheckColumnID = self._goodColumnNames.index(magName)
@@ -195,10 +243,33 @@ class population:
         )
         self._mappingFunctions = self._generate_mapping_functions()
 
+    @staticmethod
+    def _clean_input_isos(
+        isoPaths: Union[str, Sequence[str]]
+    ) -> Tuple[List[pd.DataFrame], List[Dict[str, float]]]:
+        _logger = get_logger(
+            "fidanka.population.synthesize.population._clean_input_isos"
+        )
+        iso, isoMeta = None, None
+        if isinstance(isoPaths, str):
+            _logger.info("Single isochrone provided to population synthesizer")
+            iso = [read_iso(isoPaths)]
+            isoMeta = [read_iso_metadata(isoPaths)]
+        elif isinstance(isoPaths, Sequence):
+            _logger.info("Multiple isochrones provided to population synthesizer")
+            iso = [read_iso(isoFile) for isoFile in isoPaths]
+            isoMeta = [read_iso_metadata(isoFile) for isoFile in isoPaths]
+
+        # if isinstance(iso, None) or isinstance(isoMeta, None):
+        #     _logger.error("Unable to load isochrones!")
+        #     raise RuntimeError(f"Unable to load {isoPaths} properly")
+
+        return iso, isoMeta
+
     def _generate_mapping_functions(self):
         mappingFunctions = list()
         for isoID, iso in enumerate(self.iso):
-            print(f"Generating mapping functions for isochrone {isoID}")
+            self._logger.info(f"Generating mapping functions for isochrone {isoID}")
             validAges = np.array(list(iso.keys()))
             sortedMasses = list()
             maxSize = 0
@@ -244,11 +315,8 @@ class population:
         return mappingFunctions
 
     def _sample(self, age, idx, popI, samples, binary=False, mass=None):
-        isSecondary = False
         isPrimary = False
         isSingle = False
-        if not binary and mass is not None:
-            isSecondary = True
         if binary and mass is None:
             isPrimary = True
         if not binary and mass is None:
@@ -258,54 +326,49 @@ class population:
         olderIso = self.isoNP[popI][older]
         isoAtAge = interpolate_eep_arrays(youngerIso, olderIso, age, younger, older)
 
-        # TODO Use the BolometricCorrector to get the bolometric correction
-        # isoShiftedToDistRed = shift_full_iso(isoAtAge[:, self._goodFilterIdx], self.distance, self.reddening, self._effectiveWavelengths,
-        #                                      self._goodColumnNames, self._responseFunctions)
+        # TODO: Use the BolometricCorrector to get the bolometric correction
 
         massMap = isoAtAge[:, 2]
         sortedMasses = np.sort(massMap)
+
+        # TODO: Use bolometric corrector here
         magMap = isoShiftedToDistRed[:, self._completnessCheckColumnID]
+
         completnessMap = interp1d(
             massMap, magMap, kind="linear", bounds_error=False, fill_value=np.nan
         )
+
+        # TODO: Use artificial star object here
         completness = lambda m, alpha: self._completness(completnessMap(m))
+
         resetMass = False
         mMin = massMap.min()
         mMax = massMap.max()
         if mass is None:
             resetMass = True
             mass = sample_n_masses(1, completness, self.alpha, mMin, mMax)[0]
-            # print("SELECTING MASS ", mass)
         else:
-            if isinstance(mass, Iterable):
+            if isinstance(mass, Sequence):
                 mass = mass[0]
         lowerMass, upperMass = closest(isoAtAge[:, 2], mass)
         if lowerMass == None:
             lowerMass = mMin
             upperMass = sortedMasses[1]
-            print("Falling back on end of array for lower mass")
-            print(f"Using masses {lowerMass} and {upperMass}")
+            self._logger.info("Falling back on end of array for lower mass")
+            self._logger.info(f"Using masses {lowerMass} and {upperMass}")
         if upperMass == None:
             upperMass = mMax
             lowerMass = sortedMasses[-2]
-            print("Falling back on end of array for upper mass")
-            print(f"Using masses {lowerMass} and {upperMass}")
+            self._logger.info("Falling back on end of array for upper mass")
+            self._logger.info(f"Using masses {lowerMass} and {upperMass}")
 
         # TODO: Updated to use the bolometric corrector directly
         lowerMassPoint = isoShiftedToDistRed[isoAtAge[:, 2] == lowerMass]
         upperMassPoint = isoShiftedToDistRed[isoAtAge[:, 2] == upperMass]
-        try:
-            targetSample = interpolate_arrays(
-                lowerMassPoint, upperMassPoint, mass, lowerMass, upperMass
-            )[0]
-        except AssertionError:
-            print(lowerMassPoint)
-            print(upperMassPoint)
-            print(mass)
-            print(lowerMass)
-            print(upperMass)
-            print(mMin, mMax)
-            raise
+
+        targetSample = interpolate_arrays(
+            lowerMassPoint, upperMassPoint, mass, lowerMass, upperMass
+        )[0]
 
         for rID, (ID, interpFunc) in enumerate(self.noiseFuncs.items()):
             samples[idx][2 + rID] = sum_mag(targetSample[rID], samples[idx][2 + rID])
@@ -348,6 +411,7 @@ class population:
             samples = np.zeros((self.n, 2 * len(self._goodFilterIdx) + 4))
             for filterID, _ in enumerate(self._goodFilterIdx):
                 samples[:, 2 + filterID] = np.inf
+
             whichPop = np.random.randint(0, len(self.isoNP), self.n)
 
             for idx, (age, popI) in enumerate(zip(ages, whichPop)):
