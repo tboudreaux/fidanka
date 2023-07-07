@@ -11,7 +11,7 @@ import difflib
 
 
 class artificialStar:
-    def __init__(self, calibrated_file: Union[str, None] = None):
+    def __init__(self, calibrated_file: Union[str, None] = None, **kwargs):
         self._logger = get_logger("fidanka.population.artificialStar")
         self.generated = False
         self._df = None
@@ -21,7 +21,7 @@ class artificialStar:
         self._alias: Dict[str, List[str]] = dict()
 
         if calibrated_file:
-            self.from_calibrated_file(calibrated_file)
+            self.from_calibrated_file(calibrated_file, **kwargs)
         else:
             self._logger.info(
                 "No calibrated artificial star file provided at instantiation time."
@@ -101,7 +101,10 @@ class artificialStar:
             binMeanCompletness = binMeanCompletness[sortedBinMag]
 
             self._completness_functions[filter] = interp1d(
-                binMeanMag, binMeanCompletness
+                binMeanMag,
+                binMeanCompletness,
+                bounds_error=False,
+                fill_value="extrapolate",
             )
 
     def _resolve_filter_name(self, name: str) -> str:
@@ -128,6 +131,13 @@ class artificialStar:
             if name in aliasNames:
                 return trueName
         raise KeyError(f"Unable to resolve filter name {filter}")
+
+    def __contains__(self, key):
+        try:
+            self._resolve_filter_name(key)
+        except KeyError:
+            return False
+        return True
 
     def err(self, mag: float, filter: str) -> float:
         """
@@ -255,7 +265,10 @@ class artificialStar:
                 self._filters.append(columnName)
                 self._alias[columnName] = [columnName]
                 self._err_funcs[columnName] = interp1d(
-                    self._df[columnName].values, self._df[followingColumn].values
+                    self._df[columnName].values,
+                    self._df[followingColumn].values,
+                    bounds_error=False,
+                    fill_value="extrapolate",
                 )
         self._gen_completness_functions()
         self.generated = True

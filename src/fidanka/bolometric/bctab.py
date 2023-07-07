@@ -29,7 +29,6 @@ class BolometricCorrector:
         self,
         paths: Union[str, Sequence[str]],
         FeH: float,
-        filters: Union[List, Tuple] = ["F606W", "F814W"],
         bolTablePaths: Union[str, None] = None,
     ):
         self.logger = get_logger("fidanka.bolometric.BolometricCorrector")
@@ -44,7 +43,6 @@ class BolometricCorrector:
         else:
             self.logger.info("Bolometric Corrction table paths provided.")
 
-        self.filters = filters
         self.paths = paths
         self.tables = dict()
         self.tableFeHs = get_MIST_paths_FeH(paths)
@@ -72,9 +70,8 @@ class BolometricCorrector:
         self.upperBCTable = load_bol_table(upperBCTablePath)
         self.lowerBCTable = load_bol_table(lowerBCTablePath)
         self.header = self.upperBCTable[list(self.upperBCTable.keys())[0]].columns
-        self.fullFilterNames = [
-            x for x in self.header if any([fn in x for fn in self.filters])
-        ]
+        self.fullFilterNames = [x for x in self.header][5:]
+        self.filters = self.fullFilterNames
         self.filterKeyIDs = [
             self.header.get_loc(i) for i in self.fullFilterNames if i in self.header
         ]
@@ -180,6 +177,7 @@ class BolometricCorrector:
         # Get the Tables with the correct Av from the upper and lower bounding
         # metallicity tables
         if self._check_cache(Av, Rv):
+            self.logger.info(f"Extinction Cache Hit! (Av: {Av:0.2f}, Rv: {Rv:0.2f})")
             targetBC = self._cache["targetBC"]
         else:
             self._reset_cache()
@@ -211,15 +209,15 @@ class BolometricCorrector:
             raise e
 
         # get the magnitudes corrected for distance modulus
-        dustDistCorectedMags = {
+        dustDistCorrectedMags = {
             filterName: mag + mu
             for filterName, mag in zip(self.filters, dustCorrectedMags.T)
         }
-        return dustDistCorectedMags
+        return pd.DataFrame(dustDistCorrectedMags)
 
     def __repr__(self):
         return (
-            f"<BolometricCorrector([Fe/H] : {self.FeH}), ID: {self.bolmetricTableID}>"
+            f"<BolometricCorrector([Fe/H] : {self.FeH}, ID : {self.bolmetricTableID})>"
         )
 
 
@@ -233,4 +231,4 @@ if __name__ == "__main__":
     logg = np.array([2.0])
     logL = np.array([3.0])
 
-    print(bol.apparent_mags(Teff, logg, logL, Av=0.156, mu=1))
+    # print(bol.apparent_mags(Teff, logg, logL, Av=0.156, mu=1))

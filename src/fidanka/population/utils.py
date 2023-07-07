@@ -49,7 +49,7 @@ def sample_n_masses(
     Sample n masses from a joint completness and IMF function.
     """
     if completness is None:
-        completness = lambda _: 1
+        completness = lambda *args, **kwargs: 1
     mRange = np.linspace(mMin, mMax, nNum)
     y = joint_distribution(d1=IMF, d2=completness, m=mRange, alpha=alpha)
     s = inverse_cdf_sample(y=y, x=mRange)

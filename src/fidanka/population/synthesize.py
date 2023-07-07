@@ -3,14 +3,18 @@ from fidanka.population.utils import sample_n_masses
 from fidanka.bolometric import BolometricCorrector
 from fidanka.misc.utils import closest, interpolate_arrays, get_samples, get_logger
 from fidanka.isochrone.MIST import read_iso, read_iso_metadata
+from fidanka.population.artificialStar import artificialStar
 
 
 import pickle as pkl
 import numpy as np
 import pandas as pd
 import re
+from tqdm import tqdm
 
 import numpy.typing as npt
+
+import warnings
 
 from scipy.interpolate import interp1d, LinearNDInterpolator
 from collections.abc import Iterable
@@ -159,18 +163,18 @@ class population:
         isoPaths: Union[str, Sequence[str]],
         alpha: float,
         bf: float,
+        targetMass: float,
         agePDF,
-        n,
         minAge,
         maxAge,
-        minMass: float,
-        maxMass: float,
-        artStarFuncs,
-        distance: float,
-        colorExcess: float,
-        magName,
-        bolometricCorrectionTables: Union[str, Sequence[str]],
-        Rv=3.1,
+        minMass: float = 0.2,
+        maxMass: float = 2,
+        bolometricCorrectionTables: Union[str, Sequence[str]] = "GAIA",
+        distance: float = 0,
+        colorExcess: float = 0,
+        Rv: float = 3.1,
+        artStar: Union[artificialStar, None] = None,
+        pbar: bool = True,
     ):
         # TODO: Add default arguments so that most of these do not have do be set everytime
         self._logger = get_logger("fidanka.population.synthesize.population")
@@ -184,9 +188,17 @@ class population:
         self.bf: float = bf
         self.minMass: float = minMass
         self.maxMass: float = maxMass
+        self.targetMass: float = targetMass
+
+        self.artStar: Union[artificialStar, None] = artStar
+
+        self._hasData: bool = False
+        self._data: Union[npt.NDArray, None] = None
+        self._totalMass: Union[float, None] = None
+
+        self.pbar: bool = pbar
 
         self.age = agePDF
-        self.n = n
         self.minAge = minAge
         self.maxAge = maxAge
 
@@ -199,11 +211,22 @@ class population:
         ]
 
         # overwrite the theoretical isochrone with a bolometrically corrected version
-        self.isoNP = list()
-        for isoID, (iso, bc) in enumerate(zip(self.iso, self._bolometricCorrectors)):
-            for age, df in iso.items():
+        self.isoNP: Dict[int, Dict[float, npt.NDArray]] = dict()
+        for isoID, (iso, bc) in tqdm(
+            enumerate(zip(self.iso, self._bolometricCorrectors)),
+            total=len(self._bolometricCorrectors),
+            disable=not pbar,
+            desc="Bolometrically Correcting All Populations",
+        ):
+            self.isoNP[isoID] = dict()
+            for age, df in tqdm(
+                iso.items(),
+                disable=not pbar,
+                desc=f"Correcting isochrones in pop {isoID}",
+                leave=False,
+            ):
                 self._logger.info(
-                    f"Calculating bolometric corrections for {age} Gyr isochrone..."
+                    f"Calculating bolometric corrections for {age:0.2E} yr isochrone..."
                 )
                 mags = bc.apparent_mags(
                     10 ** df["log_Teff"],
@@ -215,40 +238,9 @@ class population:
                 )
                 bolCorrectedIso = pd.concat([df, mags], axis=1)
                 self.iso[isoID][age] = bolCorrectedIso
-                self.isoNP.append(bolCorrectedIso.values)
+                self.isoNP[isoID][age] = bolCorrectedIso.values
 
         self.header = list(self.iso[0][self.ages[0]].columns)
-
-        # TODO: This is where the code is going to need to have major changes in order
-        # to comply with the new artificial star obect
-        self._goodFilterIdx = list()
-        self.noiseFuncs = dict()
-        self._effectiveWavelengths = list()
-        self._nonFilterIndices = list()
-        self._goodColumnNames = list()
-        self._completness = artStarFuncs.pop("Completness")
-        for cID, column in enumerate(self.header):
-            match = re.search(FILTERPATTERN, column)
-            if match:
-                filterName = match.group(1)
-                if filterName in artStarFuncs:
-                    self.noiseFuncs[cID] = artStarFuncs[filterName]
-                    self._goodFilterIdx.append(cID)
-                    self._effectiveWavelengths.append(float(filterName[1:-1]))
-                    self._goodColumnNames.append(f"{filterName}")
-            else:
-                self._nonFilterIndices.append(cID)
-
-        self._hasData = False
-        self._data = None
-        self._completnessCheckColumnID = self._goodColumnNames.index(magName)
-        self._completnessCheckColName = self._goodColumnNames[
-            self._completnessCheckColumnID
-        ]
-        self._isoFilterCompletenessCheckColName = (
-            f"ACS_WFC_{self._completnessCheckColName}_MAG"
-        )
-        self._mappingFunctions = self._generate_mapping_functions()
 
     @staticmethod
     def _clean_input_isos(
@@ -267,66 +259,17 @@ class population:
             iso = [read_iso(isoFile) for isoFile in isoPaths]
             isoMeta = [read_iso_metadata(isoFile) for isoFile in isoPaths]
 
-        # if isinstance(iso, None) or isinstance(isoMeta, None):
-        #     _logger.error("Unable to load isochrones!")
-        #     raise RuntimeError(f"Unable to load {isoPaths} properly")
-
         return iso, isoMeta
 
-    # TODO: This function is likely not needed anymore. Assuming all completness
-    # estimates can be moved to the end of the population synthethis.
-    def _generate_mapping_functions(self):
-        mappingFunctions = list()
-        for isoID, iso in enumerate(self.iso):
-            self._logger.info(f"Generating mapping functions for isochrone {isoID}")
-            validAges = np.array(list(iso.keys()))
-            sortedMasses = list()
-            maxSize = 0
-            for age in validAges:
-                sortedMasses.append(np.sort(iso[age]["initial_mass"].values))
-                maxSize = max(maxSize, len(sortedMasses[-1]))
-
-            sortedAges = np.sort(validAges)
-
-            apparentMags = np.empty((len(sortedAges), maxSize))
-            for ageID, age in enumerate(sortedAges):
-                print(
-                    f"Age Point: {ageID}, with {len(sortedMasses[ageID])} to work on",
-                    end="",
-                )
-                for massID, mass in enumerate(sortedMasses[ageID]):
-                    isoAtAge = iso[age]
-                    isoAtAgeAndMass = isoAtAge[isoAtAge["initial_mass"] == mass]
-                    extracted = isoAtAgeAndMass[
-                        self._isoFilterCompletenessCheckColName
-                    ].values
-                    if extracted.size == 0:
-                        apparentMags[ageID, massID] = np.nan
-                    else:
-                        apparentMags[ageID, massID] = extracted[0]
-                print("\r", end="")
-            print("")
-
-            num_pairs = sum([len(mass_list) for mass_list in sortedMasses])
-
-            input_coords = np.empty((num_pairs, 2))
-            output_values = np.empty(num_pairs)
-
-            index = 0
-            for i, age in enumerate(sortedAges):
-                for j, mass in enumerate(sortedMasses[i]):
-                    input_coords[index] = [age, mass]
-                    output_values[index] = apparentMags[i][j]
-                    index += 1
-
-            Z = LinearNDInterpolator(input_coords, output_values)
-            mappingFunctions.append(Z)
-        return mappingFunctions
-
-    def _sample_new(self, age, popIndex, binary=False, mass=None, level=0):
+    def _sample(self, age: float, popIndex: int, binary=False, mass=None, level=0):
         # TODO: Optimize age interpolation, this likeley can be cached to
         # save interpolaion time.
         younger, older = closest(self.ages, age)
+        ageKeys = list(self.isoNP[popIndex].keys())
+        if younger == None:
+            younger, older = ageKeys[0], ageKeys[1]
+        if older == None:
+            younger, older = ageKeys[-2], ageKeys[-1]
         youngerIso = self.isoNP[popIndex][younger]
         olderIso = self.isoNP[popIndex][older]
         # TODO: fix typing here.
@@ -335,7 +278,8 @@ class population:
         massMap = isoAtAge[:, 2]
         mMin, mMax = massMap.min(), massMap.max()
         sortedMasses = np.sort(massMap)
-        mass = sample_n_masses(1, self.alpha, mMin=mMin, mMax=mMax)[0]
+        if mass is None:
+            mass = sample_n_masses(1, self.alpha, mMin=mMin, mMax=mMax)[0]
         lowerMass, upperMass = closest(massMap, mass)
         if lowerMass == None:
             lowerMass = mMin
@@ -347,8 +291,8 @@ class population:
             lowerMass = sortedMasses[-2]
             self._logger.info("Falling back on end of array for upper mass")
             self._logger.info(f"Using masses {lowerMass} and {upperMass}")
-        isoBelowMass = self.isoNP[massMap == lowerMass]
-        isoAboveMass = self.isoNP[massMap == upperMass]
+        isoBelowMass = isoAtAge[massMap == lowerMass]
+        isoAboveMass = isoAtAge[massMap == upperMass]
         isoAtMass = interpolate_arrays(
             isoBelowMass, isoAboveMass, mass, lowerMass, upperMass
         )[0]
@@ -359,178 +303,130 @@ class population:
             q = np.random.uniform(qMin, 1, 1)
             primaryMass = mass
             secondaryMass = q * primaryMass
-            secondary = self._sample_new(
-                age, popIndex, binary=False, mass=secondaryMass, level=level + 1
+            secondary, sm = self._sample(
+                age, popIndex, binary=False, mass=secondaryMass[0], level=level + 1
             )
-
-    def _sample(self, age, idx, popI, samples, binary=False, mass=None):
-        isPrimary = False
-        isSingle = False
-        if binary and mass is None:
-            isPrimary = True
-        if not binary and mass is None:
-            isSingle = True
-        younger, older = closest(self.ages, age)
-        youngerIso = self.isoNP[popI][younger]
-        olderIso = self.isoNP[popI][older]
-        isoAtAge = interpolate_eep_arrays(youngerIso, olderIso, age, younger, older)
-
-        # TODO: Use the BolometricCorrector to get the bolometric correction
-
-        massMap = isoAtAge[:, 2]
-        sortedMasses = np.sort(massMap)
-
-        # TODO: Use bolometric corrector here
-        magMap = isoShiftedToDistRed[:, self._completnessCheckColumnID]
-
-        completnessMap = interp1d(
-            massMap, magMap, kind="linear", bounds_error=False, fill_value=np.nan
-        )
-
-        # TODO: Use artificial star object here
-        completness = lambda m, alpha: self._completness(completnessMap(m))
-
-        resetMass = False
-        mMin = massMap.min()
-        mMax = massMap.max()
-        if mass is None:
-            resetMass = True
-            mass = sample_n_masses(1, completness, self.alpha, mMin, mMax)[0]
+            assert sm == secondaryMass[0], "Mass Inconsistency in secondary!"
+            secondaryParsed = np.array([x[1] for x in secondary.items()])
+            isoAtMass += secondaryParsed
+            for colID, (colAVal, colBVal) in enumerate(zip(isoAtMass, secondaryParsed)):
+                isoAtMass[colID] = sum_mag(colAVal, colBVal)
+            totalMass = mass + sm
         else:
-            if isinstance(mass, Sequence):
-                mass = mass[0]
-        lowerMass, upperMass = closest(isoAtAge[:, 2], mass)
-        if lowerMass == None:
-            lowerMass = mMin
-            upperMass = sortedMasses[1]
-            self._logger.info("Falling back on end of array for lower mass")
-            self._logger.info(f"Using masses {lowerMass} and {upperMass}")
-        if upperMass == None:
-            upperMass = mMax
-            lowerMass = sortedMasses[-2]
-            self._logger.info("Falling back on end of array for upper mass")
-            self._logger.info(f"Using masses {lowerMass} and {upperMass}")
+            totalMass = mass
 
-        # TODO: Updated to use the bolometric corrector directly
-        lowerMassPoint = isoShiftedToDistRed[isoAtAge[:, 2] == lowerMass]
-        upperMassPoint = isoShiftedToDistRed[isoAtAge[:, 2] == upperMass]
-
-        targetSample = interpolate_arrays(
-            lowerMassPoint, upperMassPoint, mass, lowerMass, upperMass
-        )[0]
-
-        for rID, (ID, interpFunc) in enumerate(self.noiseFuncs.items()):
-            samples[idx][2 + rID] = sum_mag(targetSample[rID], samples[idx][2 + rID])
-            if isSingle:
-                scale = interpFunc(targetSample[rID])
-                dist = np.random.normal(loc=0, scale=scale, size=1)
-                samples[idx][2 + rID] += dist
-                samples[idx][2 + len(self.noiseFuncs) + rID] = scale
-
-        if isPrimary:
-            # Based on Milone et al. 2012 (A&A 537, A77)
-            # Assume a flat mass ratio distribution
-            qMin = mMin / mass
-            q = np.random.uniform(qMin, 1, 1)
-            primaryMass = mass
-            secondaryMass = q * primaryMass
-            self._sample(age, idx, popI, samples, binary=False, mass=secondaryMass)
-            # Inject noise into binary system after summing the magnitudes
-            for rID, (ID, interpFunc) in enumerate(self.noiseFuncs.items()):
-                scale = interpFunc(targetSample[rID])
-                dist = np.random.normal(loc=0, scale=scale, size=1)
-                samples[idx][2 + rID] += dist
-                samples[idx][2 + len(self.noiseFuncs) + rID] = scale
-            samples[idx][0] = primaryMass
-            samples[idx][-2] = q
-            samples[idx][1] = (age + samples[idx][1]) / 2
+        outputPhotometry = dict()
+        if artStar is not None and level == 0:
+            for columnID, columnName in enumerate(self.header):
+                if columnName in self.artStar:
+                    truePhotometry = isoAtMass[columnID]
+                    scale = artStar.err(truePhotometry, columnName)
+                    perturbation = np.random.normal(scale=scale, loc=0, size=1)[0]
+                    observedPhotometry = truePhotometry + perturbation
+                    outputPhotometry[columnName] = observedPhotometry
         else:
-            if resetMass:
-                samples[idx][0] = mass
-            samples[idx][1] = age
-            samples[idx][-2] = 1
+            outputPhotometry = {
+                key: value for key, value in zip(self.header, isoAtMass)
+            }
+        return outputPhotometry, totalMass
 
-        samples[idx][-1] = binary
-
-    def data(self, force=False):
+    def data(
+        self,
+        force=False,
+        ageCacheSize: int = 1000,
+        completnessMagName: Union[str, None] = None,
+    ) -> Tuple[npt.NDArray, float]:
         if not self._hasData or force:
             ages = get_samples(
-                self.n, self.age, domain=np.linspace(self.minAge, self.maxAge, 1000)
+                ageCacheSize,
+                self.age,
+                domain=np.linspace(self.minAge, self.maxAge, 1000),
             )
-            samples = np.zeros((self.n, 2 * len(self._goodFilterIdx) + 4))
-            for filterID, _ in enumerate(self._goodFilterIdx):
-                samples[:, 2 + filterID] = np.inf
 
-            whichPop = np.random.randint(0, len(self.isoNP), self.n)
+            totalMass = 0
+            id = 0
+            samples = list()
+            with tqdm(desc="Sampling...", disable=not self.pbar) as pbar:
+                while totalMass <= self.targetMass:
+                    isBinary = np.random.choice([True, False], p=[self.bf, 1 - self.bf])
+                    whichPop = np.random.randint(0, len(self.isoNP), 1)[0]
+                    photometry, mass = self._sample(
+                        ages[id % 990], whichPop, binary=isBinary
+                    )
+                    id += 1
+                    if id >= 990:
+                        ages = get_samples(
+                            ageCacheSize,
+                            self.age,
+                            domain=np.linspace(self.minAge, self.maxAge, 1000),
+                        )
+                    totalMass += mass
+                    samples.append(photometry)
+                    pbar.update(1)
+                    if id > 1000 and id % 1000 == 0:
+                        pbar.total = int(
+                            np.ceil(
+                                id + ((self.targetMass - totalMass) / (totalMass / id))
+                            )
+                        )
+                        pbar.refresh()
 
-            for idx, (age, popI) in enumerate(zip(ages, whichPop)):
-                isBinary = np.random.choice([True, False], p=[self.bf, 1 - self.bf])
-                self._sample(age, idx, popI, samples, binary=isBinary)
+            survivingStars = list()
+            if completnessMagName is not None and self.artStar is not None:
+                for star in tqdm(samples):
+                    p = np.random.uniform(0, 1)
+                    completnessCheck = self.artStar.completness(
+                        star[completnessMagName], completnessMagName
+                    )
+                    if p < completnessCheck:
+                        survivingStars.append(star)
+
             self._data = samples
             self._hasData = True
+            self._totalMass = totalMass
         else:
             samples = self._data
+            totalMass = self._totalMass
 
-        return samples
+        return survivingStars, samples, totalMass
 
-    def _resample_binaries(self):
-        if self._hasData and self._data is not None:
-            nb = self.bf * self.n
-            ns = (1 - self.bf) * self.n
-            cns = np.sum(self._data[:, -1] == 0)
-            dns = ns - cns
-            rIndexies = np.random.choice(
-                np.argwhere(self._data[:, -1] == 0).flatten(), size=dns, replace=False
-            )
-            if cns > 0:
-                ages = get_samples(
-                    dns, self.age, domain=np.linspace(self.minAge, self.maxAge, 1000)
-                )
-                samples = np.zeros((dns, 2 * len(self._goodFilterIdx) + 4))
-                whichPop = np.random.randint(0, len(self.isoNP), dns)
 
-                for idx, (rIDX, age, popI) in enumerate(zip(rIndexies, ages, whichPop)):
-                    self._sample(age, idx, popI, samples, binary=False)
+if __name__ == "__main__":
+    artStarPath = "/Users/tboudreaux/Downloads/NGC2808A.XYVIQ.cal.zpt"
+    artStar = artificialStar(artStarPath, sep=r"\s+")
+    artStar.add_filter_alias(["Vvega", "Ivega"], ["Bessell_V", "Bessell_I"])
 
-                for idx, rIDX in enumerate(rIndexies):
-                    self._data[rIDX] = samples[idx]
-            elif cns < 0:
-                self._data = np.delete(self._data, rIndexies, axis=0)
-            else:
-                pass
-            bIdx = np.argwhere(self._data[:, -1] == 1).flatten()
-            self._data = np.delete(self._data, bIdx, axis=0)
+    isoPath = "/Users/tboudreaux/programming/fidankaTestData/isochrones.txt"
+    pop = population(
+        isoPath,
+        -1,
+        0.12,
+        3e4,
+        lambda x: (x - x) + 12e9,
+        100,
+        12e9,
+        12e9,
+        colorExcess=0.4,
+        distance=10e3,
+        artStar=artStar,
+    )
+    observedPhotometry, photometry, totalClusterMass = pop.data(
+        completnessMagName="Bessell_V"
+    )
+    print(totalClusterMass, len(observedPhotometry), len(photometry))
 
-            ages = get_samples(
-                nb, self.age, domain=np.linspace(self.minAge, self.maxAge, 1000)
-            )
-            samples = np.zeros((nb, 2 * len(self._goodFilterIdx) + 4))
-            whichPop = np.random.randint(0, len(self.isoNP), nb)
+    import matplotlib.pyplot as plt
 
-            for idx, (age, popI) in enumerate(zip(ages, whichPop)):
-                self._sample(age, idx, popI, samples, binary=True)
+    for star in photometry:
+        starColor = star["Bessell_V"] - star["Bessell_I"]
+        starMag = star["Bessell_V"]
+        plt.plot(starColor, starMag, "or", alpha=0.025, markersize=1)
+    for star in observedPhotometry:
+        starColor = star["Bessell_V"] - star["Bessell_I"]
+        starMag = star["Bessell_V"]
+        plt.plot(starColor, starMag, "ok", markersize=1)
+    plt.gca().invert_yaxis()
 
-            self._data = np.concatenate((self._data, samples), axis=0)
-
-    def resample(self, bf=None):
-        if not self._hasData:
-            raise ValueError("No data to resample")
-        if bf is not None:
-            self.bf = bf
-            self._resample_binaries()
-        assert self._data is not None
-        return self._data
-
-    def to_pandas(self):
-        columnNames = (
-            ["Mass", "Age"]
-            + self._goodColumnNames
-            + [f"{name}_err" for name in self._goodColumnNames]
-            + ["q", "isBinary"]
-        )
-        df = pd.DataFrame(self.data(), columns=columnNames)
-        return df
-
-    def to_csv(self, filename):
-        df = self.to_pandas()
-        df.to_csv(filename, index=False)
+    plt.xlabel("B-I")
+    plt.ylabel("B")
+    plt.show()

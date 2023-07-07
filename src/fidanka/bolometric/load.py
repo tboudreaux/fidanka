@@ -280,6 +280,7 @@ def verify_MIST_bol_tables(paths: List[str]) -> bool:
     okay = True
     logger.info("Checking paths against stashed checksums...")
     for path in paths:
+        logger.info(f"Checking checksum for {path}")
         file = os.path.basename(path)
         line = [x for x in checksums if file in x]
         if len(line) != 1:
@@ -293,6 +294,7 @@ def verify_MIST_bol_tables(paths: List[str]) -> bool:
             logger.warn(
                 f"File {path} checksum {hexdigest} does not match stashed checksum {checksum}!"
             )
+        logger.info(f"File {path} checksum verified okay!")
     return okay
 
 
@@ -357,7 +359,8 @@ def fetch_MIST_bol_table(ID: str, folder=None) -> Tuple[str, str]:
         logger.info(
             "Pre-existing bolometric correction tables detected, verifying checksums"
         )
-        paths = os.listdir(sfp)
+        files = os.listdir(sfp)
+        paths = [os.path.join(sfp, f) for f in files]
         okay = verify_MIST_bol_tables(paths)
         if okay:
             return ID, sfp

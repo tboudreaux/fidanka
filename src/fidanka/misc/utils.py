@@ -1,9 +1,11 @@
 import numpy as np
 import numpy.typing as npt
 from typing import Callable, Tuple, Union
+from numbers import Number
 from scipy.interpolate import interp1d
 import logging
 from tqdm import tqdm
+from collections.abc import Sequence
 
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
@@ -95,8 +97,8 @@ def get_samples(
 
 
 def closest(
-    array: FARRAY_1D, target: float
-) -> Tuple[Union[FARRAY_1D, None], Union[FARRAY_1D, None]]:
+    array: Sequence[Number], target: Number
+) -> Tuple[Union[float, None], Union[float, None]]:
     """
     Find the closest values above and below a given target in an array.
     If the target is in the array, the function returns the exact target value
@@ -131,25 +133,30 @@ def closest(
     >>> closest(array, 5)
     (5, 6)
     """
-    exact_value = array[array == target]
+    if not isinstance(array, np.ndarray):
+        array = np.ndarray(array)
 
-    if exact_value.size > 0:
-        return exact_value[0], exact_value[0]
+    if isinstance(array, np.ndarray):
+        exact_value = array[array == target]
 
-    younger_ages = array[array < target]
-    older_ages = array[array > target]
+        if exact_value.size > 0:
+            return exact_value[0], exact_value[0]
 
-    if younger_ages.size == 0:
-        closest_lower = None
-    else:
-        closest_lower = younger_ages[np.argmin(np.abs(younger_ages - target))]
+        younger_ages = array[array < target]
+        older_ages = array[array > target]
 
-    if older_ages.size == 0:
-        closest_upper = None
-    else:
-        closest_upper = older_ages[np.argmin(np.abs(older_ages - target))]
+        if younger_ages.size == 0:
+            closest_lower = None
+        else:
+            closest_lower = younger_ages[np.argmin(np.abs(younger_ages - target))]
 
-    return closest_lower, closest_upper
+        if older_ages.size == 0:
+            closest_upper = None
+        else:
+            closest_upper = older_ages[np.argmin(np.abs(older_ages - target))]
+
+        return closest_lower, closest_upper
+    raise ValueError("Cannot Cast to numpy array!")
 
 
 def interpolate_arrays(
