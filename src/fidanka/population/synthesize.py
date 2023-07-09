@@ -4,6 +4,7 @@ from fidanka.bolometric import BolometricCorrector
 from fidanka.misc.utils import closest, interpolate_arrays, get_samples, get_logger
 from fidanka.isochrone.MIST import read_iso, read_iso_metadata
 from fidanka.population.artificialStar import artificialStar
+from fidanka.population.ager import populationAgeDistribution
 
 
 import pickle as pkl
@@ -148,15 +149,6 @@ def sum_err_mag(m1: float, m2: float, s1: float, s2: float) -> float:
     return (a + b) / c
 
 
-# TODO: Change this to use cluster mass instead of total cluster membership
-# Note, that this is not observed cluster mass, rather it is total cluster
-# mass. this means that completness should come at the very end instead of
-# as the begining.
-
-
-# TODO: Find a more elegant manner to deal with age. Should there be an age
-# object? One which may include both the PDF as well as the min and max
-# age? It seems very inellegant to have to pass those three independently.
 class population:
     def __init__(
         self,
@@ -164,9 +156,7 @@ class population:
         alpha: float,
         bf: float,
         targetMass: float,
-        agePDF,
-        minAge,
-        maxAge,
+        ager: populationAgeDistribution,
         minMass: float = 0.2,
         maxMass: float = 2,
         bolometricCorrectionTables: Union[str, Sequence[str]] = "GAIA",
@@ -198,9 +188,7 @@ class population:
 
         self.pbar: bool = pbar
 
-        self.age = agePDF
-        self.minAge = minAge
-        self.maxAge = maxAge
+        self.age = ager
 
         self.iso, self.isoMeta = self._clean_input_isos(isoPaths)
         self.ages = np.array(list(self.iso[0].keys()))
@@ -212,16 +200,21 @@ class population:
 
         # overwrite the theoretical isochrone with a bolometrically corrected version
         self.isoNP: Dict[int, Dict[float, npt.NDArray]] = dict()
+        self._run_bolometric_corrections()
+
+        self.header = list(self.iso[0][self.ages[0]].columns)
+
+    def _run_bolometric_corrections(self):
         for isoID, (iso, bc) in tqdm(
             enumerate(zip(self.iso, self._bolometricCorrectors)),
             total=len(self._bolometricCorrectors),
-            disable=not pbar,
+            disable=not self.pbar,
             desc="Bolometrically Correcting All Populations",
         ):
             self.isoNP[isoID] = dict()
             for age, df in tqdm(
                 iso.items(),
-                disable=not pbar,
+                disable=not self.pbar,
                 desc=f"Correcting isochrones in pop {isoID}",
                 leave=False,
             ):
@@ -239,8 +232,6 @@ class population:
                 bolCorrectedIso = pd.concat([df, mags], axis=1)
                 self.iso[isoID][age] = bolCorrectedIso
                 self.isoNP[isoID][age] = bolCorrectedIso.values
-
-        self.header = list(self.iso[0][self.ages[0]].columns)
 
     @staticmethod
     def _clean_input_isos(
@@ -337,11 +328,7 @@ class population:
         completnessMagName: Union[str, None] = None,
     ) -> Tuple[npt.NDArray, float]:
         if not self._hasData or force:
-            ages = get_samples(
-                ageCacheSize,
-                self.age,
-                domain=np.linspace(self.minAge, self.maxAge, 1000),
-            )
+            ages = self.age.sample(ageCacheSize)
 
             totalMass = 0
             id = 0
@@ -355,11 +342,7 @@ class population:
                     )
                     id += 1
                     if id >= 990:
-                        ages = get_samples(
-                            ageCacheSize,
-                            self.age,
-                            domain=np.linspace(self.minAge, self.maxAge, 1000),
-                        )
+                        ages = self.age.sample(ageCacheSize)
                     totalMass += mass
                     samples.append(photometry)
                     pbar.update(1)
@@ -396,16 +379,15 @@ if __name__ == "__main__":
     artStar = artificialStar(artStarPath, sep=r"\s+")
     artStar.add_filter_alias(["Vvega", "Ivega"], ["Bessell_V", "Bessell_I"])
 
+    ager = populationAgeDistribution(12e9, 12e9, lambda x: (x - x) + 12e9)
+
     isoPath = "/Users/tboudreaux/programming/fidankaTestData/isochrones.txt"
     pop = population(
         isoPath,
         -1,
         0.12,
         3e4,
-        lambda x: (x - x) + 12e9,
-        100,
-        12e9,
-        12e9,
+        ager,
         colorExcess=0.4,
         distance=10e3,
         artStar=artStar,
