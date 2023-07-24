@@ -307,11 +307,11 @@ class population:
             totalMass = mass
 
         outputPhotometry = dict()
-        if artStar is not None and level == 0:
+        if self.artStar is not None and level == 0:
             for columnID, columnName in enumerate(self.header):
                 if columnName in self.artStar:
                     truePhotometry = isoAtMass[columnID]
-                    scale = artStar.err(truePhotometry, columnName)
+                    scale = self.artStar.err(truePhotometry, columnName)
                     perturbation = np.random.normal(scale=scale, loc=0, size=1)[0]
                     observedPhotometry = truePhotometry + perturbation
                     outputPhotometry[columnName] = observedPhotometry
@@ -340,6 +340,8 @@ class population:
                     photometry, mass = self._sample(
                         ages[id % 990], whichPop, binary=isBinary
                     )
+                    print(photometry, mass)
+                    exit()
                     id += 1
                     if id >= 990:
                         ages = self.age.sample(ageCacheSize)
@@ -353,9 +355,8 @@ class population:
                             )
                         )
                         pbar.refresh()
-
-            survivingStars = list()
             if completnessMagName is not None and self.artStar is not None:
+                survivingStars = list()
                 for star in tqdm(samples):
                     p = np.random.uniform(0, 1)
                     completnessCheck = self.artStar.completness(
@@ -364,7 +365,9 @@ class population:
                     if p < completnessCheck:
                         survivingStars.append(star)
 
-            self._data = samples
+                self._data = survivingStars
+            else:
+                self._data = samples
             self._hasData = True
             self._totalMass = totalMass
         else:

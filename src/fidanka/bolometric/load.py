@@ -367,7 +367,7 @@ def fetch_MIST_bol_table(ID: str, folder=None) -> Tuple[str, str]:
     logger.info(f"Extracting File at {path}")
     with tarfile.open(path) as tarball:
         tarball.extractall(path=sfp)
-    paths = os.listdir(sfp)
+    paths = [os.path.join(sfp, x) for x in os.listdir(sfp)]
     okay = verify_MIST_bol_tables(paths)
     if not okay:
         logger.warn("Bolometric Tables do not match stashed checksums")
