@@ -818,6 +818,10 @@ def measure_fiducial_lines(
     )
     density = normalize_density_magBin(color, mag, density, binSize=0.3)
     vColor, ff = verticalize_CMD(color, mag, density, binSize, percLow, percHigh,targetStat=targetStat, binSize_min = binSize_min)
+    binsLeft, binsRight = mag_bins(
+            mag, percLow, percHigh, binSize, binSize_min=binSize_min
+        )
+    Eval_mags = np.mean(np.vstack((binsLeft, binsRight)),axis=0)
 
     logger.info("Fitting fiducial line to density...")
     if piecewise_linear != False:
@@ -869,8 +873,8 @@ def measure_fiducial_lines(
                     sid = np.argsort(cs)
                     gmm_vert_means[idx] = cs[sid]
                 for idx, fLine in enumerate(gmm_vert_means.T):
-                    lines[idx].add_measurement(fLine + ff(vMagBinMeans), vMagBinMeans)
+                    lines[idx].add_measurement(fLine + ff(vMagBinMeans), vMagBinMeans,Eval_mags)
             else:
                 for fLine in gmm_vert_means:
-                    lines[0].add_measurement(fLine + ff(vMagBinMeans), vMagBinMeans)
+                    lines[0].add_measurement(fLine + ff(vMagBinMeans), vMagBinMeans,Eval_mags)
         return lines

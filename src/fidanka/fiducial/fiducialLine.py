@@ -1,12 +1,14 @@
 import numpy as np
+from scipy.interpolate import CubicSpline
 
 class fiducial_line:
     def __init__(self, name):
         self.name = name
         self._measurements = list()
 
-    def add_measurement(self, color, mag):
-        self._measurements.append(np.vstack((color, mag)))
+    def add_measurement(self, color, mag, Eval_mags):
+        Eval_colors = CubicSpline(mag, color)(Eval_mags)
+        self._measurements.append(np.vstack((Eval_colors, Eval_mags)))
 
     @property
     def mean(self):
