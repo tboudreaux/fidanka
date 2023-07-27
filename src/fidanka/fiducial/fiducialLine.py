@@ -7,7 +7,7 @@ class fiducial_line:
         self._measurements = list()
 
     def add_measurement(self, color, mag, Eval_mags):
-        Eval_colors = CubicSpline(mag, color)(Eval_mags)
+        Eval_colors = CubicSpline(mag, color,extrapolate=True)(Eval_mags)
         self._measurements.append(np.vstack((Eval_colors, Eval_mags)))
 
     @property

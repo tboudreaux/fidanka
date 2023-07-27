@@ -816,17 +816,21 @@ def measure_fiducial_lines(
         reverseFilterOrder,
         convexHullPoints,
     )
-    density = normalize_density_magBin(color, mag, density, binSize=0.3)
+    density = normalize_density_magBin(color, mag, density, binSize=0.1)
     vColor, ff = verticalize_CMD(color, mag, density, binSize, percLow, percHigh,targetStat=targetStat, binSize_min = binSize_min)
     binsLeft, binsRight = mag_bins(
-            mag, percLow, percHigh, binSize, binSize_min=binSize_min
-        )
+            mag,
+            percHigh,
+            percLow,
+            binSize,
+            binSizeMin=binSize_min,
+            targetStat=targetStat)
     Eval_mags = np.mean(np.vstack((binsLeft, binsRight)),axis=0)
 
     logger.info("Fitting fiducial line to density...")
     if piecewise_linear != False:
         binsLeft, binsRight = mag_bins(
-            mag, percLow, percHigh, binSize, binSize_min=binSize_min
+            mag, percLow, percHigh, binSize, binSizeMin=binSize_min
         )
         # TODO Figure out what i should be here? Should this be in a loop?
         fiducial = plm(color, mag, piecewise_linear, binsLeft, binsRight, 0)
@@ -857,7 +861,7 @@ def measure_fiducial_lines(
                 reverseFilterOrder,
                 convexHullPoints,
                 )
-            density = normalize_density_magBin(color, mag, density, binSize=0.3, pbar=False)
+            density = normalize_density_magBin(color, mag, density, binSize=0.1, pbar=False)
             vColor, ff = verticalize_CMD(color, mag, density, binSize, percLow, percHigh, binSize_min = binSize_min)
             vColorBins, vMagBins, vDensityBins = bin_color_mag_density(
                 vColor, mag, density, targetStat=targetStat
