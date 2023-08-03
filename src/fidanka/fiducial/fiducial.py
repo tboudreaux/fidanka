@@ -280,6 +280,7 @@ def MC_convex_hull_density_approximation(
     filter2: Union[FARRAY_1D, pd.Series],
     error1: Union[FARRAY_1D, pd.Series],
     error2: Union[FARRAY_1D, pd.Series],
+    width_coeff: float,
     reverseFilterOrder: bool = False,
     mcruns: int = 10,
     convexHullPoints: int = 100,
@@ -305,6 +306,8 @@ def MC_convex_hull_density_approximation(
             One sigma uncertainties in Photometry from filter1.
         error2 : Union[ndarray[float64], pd.Series]
             One sigma uncertainties in Photometry from filter2.
+        width_coeff: float
+            The ratio of the range of manitude and range of color.
         reverseFilterOrder : bool, default=False
             Flag to determine which filter is used as the magnitude. If
             reverseFilterOrder is false then filter1 is is the magnitude. If
@@ -337,7 +340,6 @@ def MC_convex_hull_density_approximation(
     >>> density = MC_convex_hull_density_approximation(f1, f2, reverseFilterOrder=True)
 
     """
-
     if mcruns > 1:
         shape_dimension_check(filter1, error1)
         shape_dimension_check(filter2, error2)
@@ -364,7 +366,7 @@ def MC_convex_hull_density_approximation(
         else:
             colorS, magS = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
 
-        tDensity = hull_density(colorS, magS, n=convexHullPoints)
+        tDensity = hull_density(colorS*width_coeff, magS, n=convexHullPoints)
 
         density[:] = tDensity if i == 0 else (density[:] + tDensity[:]) / 2
 
@@ -640,6 +642,7 @@ def load_density(
     error2: FARRAY_1D,
     reverseFilterOrder: bool,
     convexHullPoints: int,
+    width_coeff:float,
 ) -> FARRAY_1D:
     if cacheDensity and os.path.exists(cacheDensityName):
         loaded = np.load(cacheDensityName)
@@ -651,6 +654,7 @@ def load_density(
             filter2,
             error1,
             error2,
+            width_coeff,
             reverseFilterOrder,
             convexHullPoints=convexHullPoints,
             mcruns=1,
@@ -805,6 +809,11 @@ def measure_fiducial_lines(
         handler.setLevel(logging.WARNING)
     warnings.showwarning = warning_traceback
 
+    if reverseFilterOrder==True:
+        width_coeff = (max(filter2) - min(filter2))/(max(filter2 - filter1) - min(filter2 - filter1))
+    else:
+        width_coeff = (max(filter1) - min(filter1))/(max(filter1 - filter2) - min(filter1 - filter2))
+
     color, mag = color_mag_from_filters(filter1, filter2, reverseFilterOrder)
     density = load_density(
         cacheDensity,
@@ -815,14 +824,23 @@ def measure_fiducial_lines(
         error2,
         reverseFilterOrder,
         convexHullPoints,
+        width_coeff,
     )
-    density = normalize_density_magBin(color, mag, density, binSize=0.3)
+    # density = normalize_density_magBin(color, mag, density, binSize=0.1)
     vColor, ff = verticalize_CMD(color, mag, density, binSize, percLow, percHigh,targetStat=targetStat, binSize_min = binSize_min)
+    binsLeft, binsRight = mag_bins(
+            mag,
+            percHigh,
+            percLow,
+            binSize,
+            binSizeMin=binSize_min,
+            targetStat=targetStat)
+    Eval_mags = np.mean(np.vstack((binsLeft, binsRight)),axis=0)
 
     logger.info("Fitting fiducial line to density...")
     if piecewise_linear != False:
         binsLeft, binsRight = mag_bins(
-            mag, percLow, percHigh, binSize, binSize_min=binSize_min
+            mag, percLow, percHigh, binSize, binSizeMin=binSize_min
         )
         # TODO Figure out what i should be here? Should this be in a loop?
         fiducial = plm(color, mag, piecewise_linear, binsLeft, binsRight, 0)
@@ -852,9 +870,10 @@ def measure_fiducial_lines(
                 error2,
                 reverseFilterOrder,
                 convexHullPoints,
+                width_coeff,
                 )
-            density = normalize_density_magBin(color, mag, density, binSize=0.3, pbar=False)
-            vColor, ff = verticalize_CMD(color, mag, density, binSize, percLow, percHigh, binSize_min = binSize_min)
+            # density = normalize_density_magBin(color, mag, density, binSize=0.1, pbar=False)
+            vColor, ff = verticalize_CMD(color, mag, density, binSize, percLow, percHigh, targetStat=targetStat, binSize_min = binSize_min)
             vColorBins, vMagBins, vDensityBins = bin_color_mag_density(
                 vColor, mag, density, targetStat=targetStat
             )
@@ -869,8 +888,8 @@ def measure_fiducial_lines(
                     sid = np.argsort(cs)
                     gmm_vert_means[idx] = cs[sid]
                 for idx, fLine in enumerate(gmm_vert_means.T):
-                    lines[idx].add_measurement(fLine + ff(vMagBinMeans), vMagBinMeans)
+                    lines[idx].add_measurement(fLine + ff(vMagBinMeans), vMagBinMeans,Eval_mags)
             else:
                 for fLine in gmm_vert_means:
-                    lines[0].add_measurement(fLine + ff(vMagBinMeans), vMagBinMeans)
+                    lines[0].add_measurement(fLine + ff(vMagBinMeans), vMagBinMeans,Eval_mags)
         return lines
