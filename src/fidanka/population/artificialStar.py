@@ -107,7 +107,7 @@ class artificialStar:
                 fill_value="extrapolate",
             )
 
-    def _resolve_filter_name(self, name: str) -> str:
+    def _resolve_filter_name(self, name: str, strict: bool = False) -> str:
         """
         Given a filter name (which may either be in the artificial star
         test file or an alias defined by the user) resolve this to a name
@@ -118,6 +118,9 @@ class artificialStar:
             name : str
                 name of filter, either the filter name from the artificial star
                 test file or a user defined alias
+            strict : bool, default=False
+                If true, raise a KeyError if the filter name is unable to be
+                resolved using a fuzzy search.
 
         Returns
         -------
@@ -130,6 +133,8 @@ class artificialStar:
         for trueName, aliasNames in self.aliases.items():
             if name in aliasNames:
                 return trueName
+            elif name not in aliasNames and not strict:
+                ...
         raise KeyError(f"Unable to resolve filter name {filter}")
 
     def __contains__(self, key):

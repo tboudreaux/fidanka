@@ -7,6 +7,8 @@ import logging
 from tqdm import tqdm
 from collections.abc import Sequence
 
+from fidanka.misc.logging import LoggerManager
+
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
@@ -226,6 +228,40 @@ def interpolate_arrays(
     return interpolated_array
 
 
+def interpolate_keyed_arrays(
+    arr1: Sequence,
+    arr2: Sequence,
+    target: float,
+    lower: float,
+    upper: float,
+    key: int = 0,
+) -> Sequence:
+    # Ensure arrays are numpy arrays
+    arr1 = np.array(arr1)
+    arr2 = np.array(arr2)
+
+    # Extract the EEP values from both arrays
+    eep_arr1 = arr1[:, key]
+    eep_arr2 = arr2[:, key]
+
+    # Find the intersection of the EEP values in both arrays
+    common_eeps = np.intersect1d(eep_arr1, eep_arr2)
+
+    # Filter the arrays to keep only rows with common EEP values
+    arr1_filtered = arr1[np.isin(eep_arr1, common_eeps)]
+    arr2_filtered = arr2[np.isin(eep_arr2, common_eeps)]
+
+    # Sort the filtered arrays by EEP values
+    arr1_filtered = arr1_filtered[np.argsort(arr1_filtered[:, 0])]
+    arr2_filtered = arr2_filtered[np.argsort(arr2_filtered[:, 0])]
+
+    # Perform the linear interpolation element-wise
+    interp_ratio = (target - lower) / (upper - lower)
+    interpolated_arr = arr1_filtered + interp_ratio * (arr2_filtered - arr1_filtered)
+
+    return interpolated_arr
+
+
 def get_logger(
     name,
     fileName="fidanka.log",
@@ -233,26 +269,27 @@ def get_logger(
     flevel=logging.INFO,
     clevel=logging.WARNING,
 ):
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+    # logger = logging.getLogger(name)
+    # logger.setLevel(level)
 
-    if not logger.hasHandlers():
-        # create a file handler
-        file_handler = logging.FileHandler(fileName)
-        file_handler.setLevel(flevel)
+    # if not logger.hasHandlers():
+    #     # create a file handler
+    #     file_handler = logging.FileHandler(fileName)
+    #     file_handler.setLevel(flevel)
 
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(clevel)
+    #     console_handler = logging.StreamHandler()
+    #     console_handler.setLevel(clevel)
 
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        file_handler.setFormatter(formatter)
-        console_handler.setFormatter(formatter)
+    #     formatter = logging.Formatter(
+    #         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    #     )
+    #     file_handler.setFormatter(formatter)
+    #     console_handler.setFormatter(formatter)
 
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
+    #     logger.addHandler(file_handler)
+    #     logger.addHandler(console_handler)
 
+    logger = LoggerManager.get_logger()
     return logger
 
 

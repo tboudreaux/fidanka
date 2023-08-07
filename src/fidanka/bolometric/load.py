@@ -379,6 +379,15 @@ def fetch_MIST_bol_table(ID: str, folder=None) -> Tuple[str, str]:
 
 
 def get_MIST_paths_FeH(paths: List[str]):
+    """
+    Given some list of paths to files names in the schema that the mist
+    bolometric correction tables are named, parse out the FeH values for
+    each table in the list.
+
+    Parameters
+    ----------
+    paths
+    """
     tableFeHs = np.empty(len(paths))
     for idx, path in enumerate(paths):
         tabFeH = re.search(r"feh([mp]\d+)", path).group(1)

@@ -26,17 +26,18 @@ FARRAY_2D_2C = npt.NDArray[[FARRAY_1D, FARRAY_1D]]
 CHI2R = dict[str, Any]
 ORT = Tuple[float, Tuple[float, float, float], str, float, float]
 
+
 def guess_mu(
-        fIso : Callable,
-        fFid : Callable,
-        isoMagRange : Tuple[float, float],
-        fidMagRange : Tuple[float, float],
-        nMin : int = 5,
-        nMax : int = 20,
-        mMin : float = -10,
-        mMax : float =10,
-        pbar : bool =False
-        ) -> Tuple[float, float]:
+    fIso: Callable,
+    fFid: Callable,
+    isoMagRange: Tuple[float, float],
+    fidMagRange: Tuple[float, float],
+    nMin: int = 5,
+    nMax: int = 20,
+    mMin: float = -10,
+    mMax: float = 10,
+    pbar: bool = False,
+) -> Tuple[float, float]:
     """
     Use Dynamic Time Warping to estimate the mu adjustment between the fiducial
     line and isochrone optimization. This algorithm is somewhat convoluted; however,
@@ -58,7 +59,7 @@ def guess_mu(
 
     I've tested this algorithm on a large number of cases, some of which are quite gnarlly.
     And it seems to work well. It is also quite fast. The only downside is that it is
-    the initial location of the curves must be somewhat close. This can be easily 
+    the initial location of the curves must be somewhat close. This can be easily
     achived using mean magnitude alignment.
 
     Parameters
@@ -83,7 +84,7 @@ def guess_mu(
             Whether or not to show a progress bar.
 
     Returns
-    ------- 
+    -------
         mean : float
             The mean magnitude shift.
         std : float
@@ -95,32 +96,39 @@ def guess_mu(
     Ns = list(range(nMin, nMax))
     bestMagShifts = np.zeros(shape=(len(Ns)))
 
-    for nID, n in tqdm(enumerate(Ns), total=len(Ns), desc="Guessing mu", disable=not pbar):
+    for nID, n in tqdm(
+        enumerate(Ns), total=len(Ns), desc="Guessing mu", disable=not pbar
+    ):
         correlations = list()
 
         magShifts = np.linspace(mMin, mMax, n)
         fMagEval = np.linspace(fidMagRange[0], fidMagRange[1], n)
         iMagEval = np.linspace(isoMagRange[0], isoMagRange[1], n)
-        dtwX = np.zeros(shape=(n,1))
-        dtwY = np.zeros(shape=(n,1))
+        dtwX = np.zeros(shape=(n, 1))
+        dtwY = np.zeros(shape=(n, 1))
 
         minFiducialColor, maxFiducialColor = min(fMagEval), max(fMagEval)
         fColor = fFid(fMagEval)
         dtwX[:, 0] = fColor
 
         # Cross DTW Correlate
-        for magShift in magShifts: 
-            iColor = fIso(iMagEval+magShift)
+        for magShift in magShifts:
+            iColor = fIso(iMagEval + magShift)
             dtwY[:, 0] = iColor
             dtw = fastdtw(dtwX, dtwY, dist=euclidean)
 
             dists = list()
             for i, j in dtw[1]:
                 if minFiducialColor <= iMagEval[j] <= maxFiducialColor:
-                    dists.append(np.sqrt((fColor[i] - iColor[j])**2 + (fMagEval[i] - iMagEval[j])**2))
+                    dists.append(
+                        np.sqrt(
+                            (fColor[i] - iColor[j]) ** 2
+                            + (fMagEval[i] - iMagEval[j]) ** 2
+                        )
+                    )
 
             chi2 = np.sum([x**2 for x in dists])
-            chi2nu = chi2/len(dists)
+            chi2nu = chi2 / len(dists)
             correlations.append(chi2nu)
 
         # Select the mag result in the best (smallest) chi2nu
@@ -131,23 +139,24 @@ def guess_mu(
     logger.info(f"DTW mu adjustment estimation {mean:0.3f} +/- {std:0.4f}")
     return mean, std
 
+
 def get_init_mu_guess(
-        iso : npt.NDArray,
-        fiducialLine : npt.NDArray,
-        bc : BolometricCorrector,
-        filters : Tuple[str, str, str]
-        ) -> Tuple[float, Tuple[npt.NDArray, npt.NDArray]]:
+    iso: npt.NDArray,
+    fiducialLine: npt.NDArray,
+    bc: BolometricCorrector,
+    filters: Tuple[str, str, str],
+) -> Tuple[float, Tuple[npt.NDArray, npt.NDArray]]:
     """
     Make a first pass guess at the distance modulus using mean alignment
     of the magnitude at Av=0. Further optimization will have to be done
-    but this preprocessing allows other algorithms such as the 
+    but this preprocessing allows other algorithms such as the
     cross dtw algorithm to work
 
     Parameters
     ----------
         iso : np.ndarray
             The isochrones (MIST format). This must have the temperature
-            as the 2nd column, the logg as the third, and the log L as 
+            as the 2nd column, the logg as the third, and the log L as
             the first (the first column should be the EEPs; however, those
             are not actually used in this function).
         fiducualLine : np.ndarray
@@ -180,13 +189,8 @@ def get_init_mu_guess(
     logger = get_logger("fidanka.isofit.fit.get_init_mu_guess")
     logger.info("Initial mu guess")
 
-    bolCorrected = bc.apparent_mags(
-        iso[:,1],
-        iso[:,2],
-        iso[:,3],
-        Av=0,
-        mu=0)
-    
+    bolCorrected = bc.apparent_mags(iso[:, 1], iso[:, 2], iso[:, 3], Av=0, mu=0)
+
     isoColor = bolCorrected[filters[0]] - bolCorrected[filters[1]]
     isoMag = bolCorrected[filters[2]]
     shift = np.mean(isoMag) - np.mean(fiducialLine[1])
@@ -195,14 +199,15 @@ def get_init_mu_guess(
 
     return shift, (isoMag - shift, isoColor)
 
+
 def limit_mu_space(
-        iso : npt.NDArray,
-        fiducialLine : npt.NDArray,
-        bc : BolometricCorrector,
-        filters : Tuple[str, str, str],
-        fFid : Callable,
-        pbar : bool = False
-        ) -> Tuple[float, float]:
+    iso: npt.NDArray,
+    fiducialLine: npt.NDArray,
+    bc: BolometricCorrector,
+    filters: Tuple[str, str, str],
+    fFid: Callable,
+    pbar: bool = False,
+) -> Tuple[float, float]:
     """
     Use the two step, mean mangitude alignment and dtw cross correlation to guess
     the distance modulus which should be applied to some isochchrone. Also guess
@@ -213,7 +218,7 @@ def limit_mu_space(
     ----------
         iso : np.ndarray
             The isochrones (MIST format). This must have the temperature
-            as the 2nd column, the logg as the third, and the log L as 
+            as the 2nd column, the logg as the third, and the log L as
             the first (the first column should be the EEPs; however, those
             are not actually used in this function).
         fiducualLine : np.ndarray
@@ -250,30 +255,28 @@ def limit_mu_space(
 
     initMuGuess, (isoMag, isoColor) = get_init_mu_guess(iso, fiducialLine, bc, filters)
 
-    f = interp1d(
-            isoMag,
-            isoColor,
-            bounds_error=False,
-            fill_value='extrapolate'
-            )
+    f = interp1d(isoMag, isoColor, bounds_error=False, fill_value="extrapolate")
 
     isoMagRange = (min(isoMag), max(isoMag))
     fiducialMagRange = (min(fiducialLine[1]), max(fiducialLine[1]))
 
-    magShiftCorrection, magStd = guess_mu(f, fFid, isoMagRange, fiducialMagRange, pbar=pbar)
+    magShiftCorrection, magStd = guess_mu(
+        f, fFid, isoMagRange, fiducialMagRange, pbar=pbar
+    )
     totalShift = initMuGuess + magShiftCorrection
 
     logger.info(f"Limiting mu search space {totalShift:0.3f} +/- {magStd:0.4f}")
 
     return totalShift, magStd
 
+
 def bol_correct_iso(
-        iso : npt.NDArray,
-        bc : BolometricCorrector,
-        filters : Tuple[str, str, str] = ("F606W", "F814W", "F606W"),
-        Av : float = 0,
-        distance : float = 0,
-        ) -> Tuple[npt.NDArray, npt.NDArray]:
+    iso: npt.NDArray,
+    bc: BolometricCorrector,
+    filters: Tuple[str, str, str] = ("F606W", "F814W", "F606W"),
+    Av: float = 0,
+    distance: float = 0,
+) -> Tuple[npt.NDArray, npt.NDArray]:
     """
     Bolometrically correct an isochrone and return the color and magnitude
     arrays. The isochrone must be in the correct format (i.e. the MIST format).
@@ -283,7 +286,7 @@ def bol_correct_iso(
         iso : np.ndarray
             The isochrone to bolometrically corerect, must be a numpy representation
             of a MIST format isochrone with EEPs in the 0th column, effective
-            temperature (NOT log Teff) in the 1st, logg in the 2nd, and logL in the 
+            temperature (NOT log Teff) in the 1st, logg in the 2nd, and logL in the
             3rd.
         bc : BolometricCorrector
             An already instantiaed bolometric corrector object.
@@ -304,40 +307,36 @@ def bol_correct_iso(
     """
     logger = get_logger("fidanka.isofit.fit.bol_correct_iso")
 
-    bolCorrected = bc.apparent_mags(
-        iso[:,1],
-        iso[:,2],
-        iso[:,3],
-        Av=Av,
-        mu=distance)
+    bolCorrected = bc.apparent_mags(iso[:, 1], iso[:, 2], iso[:, 3], Av=Av, mu=distance)
 
     isoColor = bolCorrected[filters[0]] - bolCorrected[filters[1]]
     isoMag = bolCorrected[filters[2]]
     return isoColor, isoMag
 
+
 def get_ISO_CMD_Chi2(
-        iso : pd.DataFrame,
-        fiducialLine : FARRAY_2D_2C ,
-        bc : BolometricCorrector,
-        fFid : Callable,
-        filters : Tuple[str, str, str] = ("F606W", "F814W", "F606W"),
-        distance : float = 0,
-        Av : float = 0,
-        age : float = None,
-        n : int = 100,
-        verbose : bool = False
-        ) -> float:
+    iso: pd.DataFrame,
+    fiducialLine: FARRAY_2D_2C,
+    bc: BolometricCorrector,
+    fFid: Callable,
+    filters: Tuple[str, str, str] = ("F606W", "F814W", "F606W"),
+    distance: float = 0,
+    Av: float = 0,
+    age: float = None,
+    n: int = 100,
+    verbose: bool = False,
+) -> float:
     """
     Calculate the reduced chi2 value between an isochrone and a fiducialLine
     at a given distance in parsecs and color excess. The Chi2 is calculated
     as the sum of the squares of the distance between equivilent evolutionary
-    points as detected by dynamic time warping. 
+    points as detected by dynamic time warping.
 
     Parameters
     ----------
         iso : pd.DataFrame
             The isochrone. If loaded and bolometrically corrected using pysep
-            then this will be in the correct format. Otherwise make sure that 
+            then this will be in the correct format. Otherwise make sure that
             it includes filters called "WFC3_UVIS_filter[0..2]_MAG" which have
             your filters in them. In future this will be cleaned up to allow for
             more general filters.
@@ -349,7 +348,7 @@ def get_ISO_CMD_Chi2(
             The fiducial line function. This function must take a magnitude and return a color.
         filters : Tuple[str, str, str], default=("F606W", "F814W", "F606W")
             Filter names to use (which will get injcected to form the column
-            names used to get the color and mag. The color is defined as 
+            names used to get the color and mag. The color is defined as
             filter[0] - filter[1] and the mag is filter[2])
         distance : float, default = 0
             Distance in parsecs to shift isochrone by when calculating the chi2
@@ -360,11 +359,11 @@ def get_ISO_CMD_Chi2(
             The Age Currently being optimized. Not used here directly; however, if passed
             will be used as an additional debug output.
         n : int, default = 100
-            The number of points to use when calculating the interpolation 
+            The number of points to use when calculating the interpolation
             used for the final dtw distance match (which is used to calculate
             the final chi2).
         verbose : bool, default = False
-            Flag controlling whether verbose output will be used. This can 
+            Flag controlling whether verbose output will be used. This can
             be helpful for debugging; however, it may slow down the code.
 
     Returns
@@ -377,15 +376,12 @@ def get_ISO_CMD_Chi2(
     """
     logger = get_logger("fidanka.isofit.fit.get_ISO_CMD_Chi2")
     isoColor, isoMag = bol_correct_iso(
-            iso,
-            bc,
-            filters=filters,
-            Av=Av,
-            distance=distance)
+        iso, bc, filters=filters, Av=Av, distance=distance
+    )
 
     transposedFiducial = fiducialLine.T
 
-    sortedFiducial = transposedFiducial[transposedFiducial[:,1].argsort()]
+    sortedFiducial = transposedFiducial[transposedFiducial[:, 1].argsort()]
 
     maxMag = max(max(isoMag), max(sortedFiducial[:, 1]))
     minMag = min(min(isoMag), min(sortedFiducial[:, 1]))
@@ -393,10 +389,12 @@ def get_ISO_CMD_Chi2(
     n = 100
     fMagEval = np.linspace(fiducialLine[1].min(), fiducialLine[1].max(), n)
     fColor = fFid(fMagEval)
-    isoFuncShifted = interp1d(isoMag, isoColor, bounds_error=False, fill_value='extrapolate')
+    isoFuncShifted = interp1d(
+        isoMag, isoColor, bounds_error=False, fill_value="extrapolate"
+    )
     iColor = isoFuncShifted(fMagEval)
-    dtwX = np.zeros(shape=(n,1))
-    dtwY = np.zeros(shape=(n,1))
+    dtwX = np.zeros(shape=(n, 1))
+    dtwY = np.zeros(shape=(n, 1))
 
     dtwX[:, 0] = fColor
     dtwY[:, 0] = iColor
@@ -414,10 +412,12 @@ def get_ISO_CMD_Chi2(
     dists = list()
     for i, j in dtw[1]:
         # compare the distance between the fiducial and isochrone points EEPs
-        if ((j < len(iColor)-1) and j != 0) and ((i < len(fColor)-1) and i != 0):
-            dists.append(np.sqrt((fColor[i] - iColor[j])**2 + (fMagEval[i] - fMagEval[j])**2))
+        if ((j < len(iColor) - 1) and j != 0) and ((i < len(fColor) - 1) and i != 0):
+            dists.append(
+                np.sqrt((fColor[i] - iColor[j]) ** 2 + (fMagEval[i] - fMagEval[j]) ** 2)
+            )
     chi2 = np.sum([x**2 for x in dists])
-    chi2nu = chi2/len(dists)
+    chi2nu = chi2 / len(dists)
 
     if verbose:
         logger.info(f"Chi2nu: {chi2nu}, mu: {distance}, Av: {Av}, age: {age}")
@@ -426,16 +426,15 @@ def get_ISO_CMD_Chi2(
 
 
 def optimize(
-        fiducial : FARRAY_2D_2C,
-        isochrone : Tuple[npt.NDArray, npt.NDArray, npt.NDArray],
-        bolTables : List[str],
-        FeH : float,
-        filters : Tuple[str, str, str] = ("F606W", "F814W", "F606W"),
-        verbose : bool = False,
-        muSigSize : float = 3,
-        muAge : float = 10,
-        ) -> CHI2R:
-
+    fiducial: FARRAY_2D_2C,
+    isochrone: Tuple[npt.NDArray, npt.NDArray, npt.NDArray],
+    bolTables: Union[str, List[str]],
+    FeH: float,
+    filters: Tuple[str, str, str] = ("F606W", "F814W", "F606W"),
+    verbose: bool = False,
+    muSigSize: float = 3,
+    muAge: float = 10,
+) -> CHI2R:
     """
     Run Chi2 optimization results on photometry and isochrone minimizing the
     age, distance, and reddining needed to fit the isochrone to the fiducial
@@ -449,23 +448,28 @@ def optimize(
             fiducialLine[:, 1] are the magniudes of each fiducual point.
         isochrone : dict[pd.DataFrame]
             The isochrone. If loaded and bolometrically corrected using pysep
-            then this will be in the correct format. Otherwise make sure that 
+            then this will be in the correct format. Otherwise make sure that
             it includes filters called "WFC3_UVIS_filter[0..2]_MAG" which have
             your filters in them. In future this will be cleaned up to allow for
             more general filters.
+        bolTables : Union[str, List[str]]
+            The bolometric correction tables to use. If a list is passed then
+            the tables will be read from disk (each list element is a path to
+            a table). If a string is passed then the appropriate tables will
+            be fetched from the MIST website and used.
         filters : Tuple[str, str, str], default=("F606W", "F814W", "F606W")
             Filter names to use (which will get injcected to form the column
-            names used to get the color and mag). The color is defined as 
+            names used to get the color and mag). The color is defined as
             filter[0] - filter[1] and the mag is filter[2]
         FeH : float
             The [Fe/H] value to use when bolometrically correcting isochrones.
         verbose : bool, default = False
-            Flag controlling whether verbose output will be used. This can 
+            Flag controlling whether verbose output will be used. This can
             be helpful for debugging; however, it may slow down the code.
         muSigSize : float, default = 3
             The width of the sigma distribution above and below the central mu
             guess to be explored. Large values will allow for more leway in the
-            E(B-V) value optimized. However, they will also slow down the 
+            E(B-V) value optimized. However, they will also slow down the
             optimizer and may increase the likelyhood of falling into a local
             minima
         muAge : float, default=10
@@ -477,69 +481,63 @@ def optimize(
             The optimization results
     """
     logger = get_logger("fidanka.isofit.fit.optimize")
-    logger.info(f"Optimizing using [Fe/H] = {FeH}, over {filters} and with muSigSize: {muSigSize}")
+    logger.info(
+        f"Optimizing using [Fe/H] = {FeH}, over {filters} and with muSigSize: {muSigSize}"
+    )
 
     # Do the fiducial interpolation once since it is the same in each
     # iteration
     fFid = interp1d(
-            fiducial[1],
-            fiducial[0],
-            bounds_error=False,
-            fill_value='extrapolate'
-            )
+        fiducial[1], fiducial[0], bounds_error=False, fill_value="extrapolate"
+    )
 
     # instantiate the bolometric corrector object (this will also
     # allow the FeH interpolation to run only once).
     logger.info("Building Bolometric Corrector Table...")
-    bc = BolometricCorrector(bolTables, FeH, filters=filters[:-1])
+    bc = BolometricCorrector(bolTables, FeH)
     logger.info("Bolometric Corrector Table Built!")
 
     logger.info(f"Measuring mu space and {muAge} Gyr...")
     muGuess, muStd = limit_mu_space(
-            interp_isochrone_age(isochrone, muAge),
-            fiducial,
-            bc,
-            filters,
-            fFid, 
-            pbar=False
-            )
+        interp_isochrone_age(isochrone, muAge), fiducial, bc, filters, fFid, pbar=False
+    )
     muGuess = abs(muGuess)
-    muLower, muUpper = muGuess - 3*muStd, muGuess + 3*muStd
+    muLower, muUpper = muGuess - 3 * muStd, muGuess + 3 * muStd
     logger.info("Mu space measured!")
 
     # Wrapper function to allow age to be interpolated on the fly
     age_d_E_opt = lambda iso, age, d, E: get_ISO_CMD_Chi2(
-            interp_isochrone_age(iso, age),
-            fiducial,
-            bc,
-            fFid,
-            distance=d,
-            Av=E,
-            filters=filters,
-            age=age,
-            verbose=verbose)
+        interp_isochrone_age(iso, age),
+        fiducial,
+        bc,
+        fFid,
+        distance=d,
+        Av=E,
+        filters=filters,
+        age=age,
+        verbose=verbose,
+    )
 
     # x -> (age, mu, E(B-V))
     objective = lambda x: age_d_E_opt(isochrone, x[0], x[1], x[2])
 
     logger.info(f"Minimization started with mu: {muLower:0.3f} - {muUpper:0.3f}...")
     optimized = minimize(
-            objective,
-            [12, abs(muGuess), 0.5],
-            bounds=[
-                (5,20),
-                (muLower, muUpper),
-                (0, 2)
-                ],
-            )
-    logger.info(f"Minimization complete, age: {optimized.x[0]:0.3f}, mu: {optimized.x[1]:0.3f}, E(B-V): {optimized.x[2]:0.3f}")
+        objective,
+        [12, abs(muGuess), 0.5],
+        bounds=[(5, 20), (muLower, muUpper), (0, 2)],
+    )
+    logger.info(
+        f"Minimization complete, age: {optimized.x[0]:0.3f}, mu: {optimized.x[1]:0.3f}, E(B-V): {optimized.x[2]:0.3f}"
+    )
 
     assert isinstance(optimized, OptimizeResult)
-    return {'opt': optimized, 'iso': isochrone, 'bc': bc}
+    return {"opt": optimized, "iso": isochrone, "bc": bc}
+
 
 def order_best_fit_result(
-        optimizationResults: dict[str, dict[float, dict[float, CHI2R]]]
-        ) -> dict[str, List[ORT]]:
+    optimizationResults: dict[str, dict[float, dict[float, CHI2R]]]
+) -> dict[str, List[ORT]]:
     """
     Order the best fit optimization results so that they are easy to parse.
     Ordering is done based on the fun attribure of the OptimizeResult object.
@@ -564,23 +562,23 @@ def order_best_fit_result(
             populations of 2808. This should be pretty trivial to do
 
     """
-    comparison = {'A': list(), 'E': list()}
+    comparison = {"A": list(), "E": list()}
     for pop, popD in optimizationResults.items():
         for Y, YD in popD.items():
             for a, aD in YD.items():
-                comparison[pop].append((aD['opt']['fun'], aD['opt']['x'], pop, Y, a, aD['bc'], aD['iso']))
+                comparison[pop].append(
+                    (aD["opt"]["fun"], aD["opt"]["x"], pop, Y, a, aD["bc"], aD["iso"])
+                )
         comparison[pop] = sorted(comparison[pop], key=lambda x: x[0])
     return comparison
 
+
 def fit_isochrone_to_population(
-        fiducialSequences : List[FARRAY_2D_2C],
-        ISOs : dict[str, dict[float, dict[float, pd.DataFrame]]],
-        filters : Tuple[str, str, str],
-        fiducialLookup : dict[str, int]
-        ) -> dict[str, Union[
-            dict[str, ORT],
-            dict[str, dict[float, dict[float, CHI2R]]]
-            ]]:
+    fiducialSequences: List[FARRAY_2D_2C],
+    ISOs: dict[str, dict[float, dict[float, pd.DataFrame]]],
+    filters: Tuple[str, str, str],
+    fiducialLookup: dict[str, int],
+) -> dict[str, Union[dict[str, ORT], dict[str, dict[float, dict[float, CHI2R]]]]]:
     """
     Take a set of isochrones which vary in population, helium mass fraction,
     and alpha enhancement and fit them to a fiducial line using chi2
@@ -593,7 +591,7 @@ def fit_isochrone_to_population(
             function. Where fiducialLine[:, 0] are the colors of each fiducual
             point and fiducialLine[:, 1] are the magniudes of each fiducual
             point. Each element of the list is a differenet fiducual line
-            for a differenet population. If you only have one population 
+            for a differenet population. If you only have one population
             this will be a single element list.
         ISOs : dict[str, dict[float, dict[float, pd.DataFrame]]]
             dictionary of isochrones indexed by population name, helium mass
@@ -604,7 +602,7 @@ def fit_isochrone_to_population(
             future this will be cleaned up to allow for more general filters.
         filters : Tuple[str, str, str], default=("F606W", "F814W", "F606W")
             Filter names to use (which will get injcected to form the column
-            names used to get the color and mag. The color is defined as 
+            names used to get the color and mag. The color is defined as
             filter[0] - filter[1] and the mag is filter[2]
         fiducialLookup : dict[str, int]
             Mapping between ISOs and fiducialSequences. If your ISOs contains
@@ -631,5 +629,5 @@ def fit_isochrone_to_population(
                 results[population][Y][a] = optimize(popFid, alphaISO, filters)
 
     orderedOptimizationResults = order_best_fit_result(results)
-    out = {'bf': orderedOptimizationResults, 'r': results}
+    out = {"bf": orderedOptimizationResults, "r": results}
     return out
