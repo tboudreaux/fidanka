@@ -163,25 +163,29 @@ def GMM_component_measurment(xB, yB, n=50):
     gmm_means = np.squeeze(gmm_means)
     return gmm_means
 
-def median_ridge_line_estimate(color,
-                               mag,
-                               density,
-                               binSize='uniformCS',
-                               max_Num_bin = False,
-                               binSize_min=0.1,
-                               sigmaCut = 3,
-                               cleaningIterations=10,
-                               components=100,
-                               normBinSize=0.3,
-                               targetStat=250):
+
+def median_ridge_line_estimate(
+    color,
+    mag,
+    density,
+    binSize="uniformCS",
+    max_Num_bin=False,
+    binSize_min=0.1,
+    sigmaCut=3,
+    cleaningIterations=10,
+    components=100,
+    normBinSize=0.3,
+    targetStat=250,
+):
     colorBins, magBins, densityBins = bin_color_mag_density(
-            color,
-            mag,
-            density,
-            binSize=binSize,
-            max_Num_bin=max_Num_bin,
-            binSize_min=binSize_min,
-            targetStat=targetStat)
+        color,
+        mag,
+        density,
+        binSize=binSize,
+        max_Num_bin=max_Num_bin,
+        binSize_min=binSize_min,
+        targetStat=targetStat,
+    )
     colorBins, magBins, densityBins = clean_bins(
         colorBins, magBins, densityBins, sigma=sigmaCut, iterations=cleaningIterations
     )
@@ -232,8 +236,8 @@ def bin_color_mag_density(
     mag: FARRAY_1D,
     density: FARRAY_1D,
     binSize: Union[str, float] = "uniformCS",
-    percLow: float = None,
-    percHigh: float = None,
+    percLow: Union[float, None] = None,
+    percHigh: Union[float, None] = None,
     max_Num_bin: Union[bool, int] = False,
     binSize_min: float = 0.1,
     targetStat: int = 1000,
@@ -277,12 +281,8 @@ def bin_color_mag_density(
     if max_Num_bin == 0:
         max_Num_bin = False
     left, right = mag_bins(
-            mag,
-            percHigh,
-            percLow,
-            binSize,
-            binSizeMin=binSize_min,
-            targetStat=targetStat)
+        mag, percHigh, percLow, binSize, binSizeMin=binSize_min, targetStat=targetStat
+    )
 
     colorBins = list()
     magBins = list()
@@ -297,8 +297,8 @@ def bin_color_mag_density(
 
 def mag_bins(
     mag: Union[FARRAY_1D, pd.Series],
-    percHigh: float,
-    percLow: float,
+    percHigh: Union[float, None],
+    percLow: Union[float, None],
     binSize: Union[str, float],
     maxNumBins: Union[bool, int] = False,
     binSizeMin: float = 0.1,
@@ -366,10 +366,10 @@ def mag_bins(
     if binSize == "uniformCS":
         srtedIDX = np.argsort(mag)
         sMag = mag[srtedIDX]
-        # subs = np.floor(sMag.shape[0]/targetStat).astype(int)
-        # binsM = np.array_split(sMag, subs)
-        # binsLeft = np.array([np.min(b) for b in binsM])
-        # binsRight = np.array([np.max(b) for b in binsM])
+
+        # Type consistency
+        if isinstance(sMag, pd.Series):
+            sMag = sMag.values
         Num_star = len(sMag)
         binsLeft = [sMag[0]]
         binsRight = []
@@ -386,7 +386,7 @@ def mag_bins(
             idx_right_max = max(idx_right_count, idx_right_mag)
         binsLeft = np.array(binsLeft[:-1])
         binsRight[-1] = sMag[-1]
-        binsRight= np.array(binsRight)
+        binsRight = np.array(binsRight)
 
     else:
         magRange = percentile_range(mag, percLow, percHigh)

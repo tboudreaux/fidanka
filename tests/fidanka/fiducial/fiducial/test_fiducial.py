@@ -264,6 +264,7 @@ def test_measure_fiducial_line():
 
     meanM = lines[0].mean
     meanT = target[0].mean
+    print(meanM, meanT)
     okayList = np.zeros(len(meanM[0]), dtype=bool)
     for idx, (mC, tC, mM, tM) in enumerate(zip(meanM[0], meanT[0], meanM[1], meanT[1])):
         okay = mC == pytest.approx(tC, abs=1e-1)
@@ -272,7 +273,7 @@ def test_measure_fiducial_line():
 
     numTrue = len(okayList[okayList == True])
     total = len(okayList)
-    assert numTrue / total >= 0.70
+    assert numTrue / total >= 0.70, numTrue
 
 
 if __name__ == "__main__":

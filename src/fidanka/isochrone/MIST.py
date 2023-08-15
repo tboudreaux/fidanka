@@ -62,11 +62,21 @@ def read_iso_metadata(filename: str) -> dict[str, Any]:
             first 7 rows of the isochrone file.
     """
     with open(filename) as f:
-        rawHeader = list(islice(f, 7))
-
+        rawHeader = list(islice(f, 9))
+    photometry = (
+        True
+        if any(["photometric system" in headerLine for headerLine in rawHeader])
+        else False
+    )
     MESAVersion = rawHeader[0].split("=")[1].rstrip().lstrip()
     MESARevision = rawHeader[1].split("=")[1].rstrip().lstrip()
-    numRow = [float(x) for x in rawHeader[4][1:].rstrip().lstrip().split()]
+    if photometry:
+        photometricSystem = rawHeader[2].split("=")[1].rstrip().lstrip()
+        numRowID = 5
+    else:
+        photometricSystem = None
+        numRowID = 4
+    numRow = [float(x) for x in rawHeader[numRowID][1:].rstrip().lstrip().split()]
 
     metadata = {
         "MESAVersion": MESAVersion,
@@ -76,5 +86,6 @@ def read_iso_metadata(filename: str) -> dict[str, Any]:
         "[Fe/H]": numRow[2],
         "[a/Fe]": numRow[3],
         "v/vcrit": numRow[4],
+        "photometricSystem": photometricSystem,
     }
     return metadata
