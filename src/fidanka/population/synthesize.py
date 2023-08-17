@@ -5,6 +5,7 @@ from fidanka.misc.utils import closest, interpolate_arrays, get_samples, get_log
 from fidanka.isochrone.MIST import read_iso, read_iso_metadata
 from fidanka.population.artificialStar import artificialStar
 from fidanka.population.ager import populationAgeDistribution
+from fidanka.misc.utils import interpolate_keyed_arrays
 
 
 import pickle as pkl
@@ -204,6 +205,13 @@ class population:
 
         self.header = list(self.iso[0][self.ages[0]].columns)
 
+    @property
+    def bcFilters(self):
+        filters = list()
+        for bc in self._bolometricCorrectors:
+            filters.extend(bc.filters)
+        return list(set(filters))
+
     def _run_bolometric_corrections(self):
         for isoID, (iso, bc) in tqdm(
             enumerate(zip(self.iso, self._bolometricCorrectors)),
@@ -264,7 +272,9 @@ class population:
         youngerIso = self.isoNP[popIndex][younger]
         olderIso = self.isoNP[popIndex][older]
         # TODO: fix typing here.
-        isoAtAge = interpolate_eep_arrays(youngerIso, olderIso, age, younger, older)
+        isoAtAge = interpolate_keyed_arrays(
+            youngerIso, olderIso, age, younger, older, key=0
+        )  # EEPs in col 0
 
         massMap = isoAtAge[:, 2]
         mMin, mMax = massMap.min(), massMap.max()
@@ -307,11 +317,11 @@ class population:
             totalMass = mass
 
         outputPhotometry = dict()
-        if artStar is not None and level == 0:
+        if self.artStar is not None and level == 0:
             for columnID, columnName in enumerate(self.header):
                 if columnName in self.artStar:
                     truePhotometry = isoAtMass[columnID]
-                    scale = artStar.err(truePhotometry, columnName)
+                    scale = self.artStar.err(truePhotometry, columnName)
                     perturbation = np.random.normal(scale=scale, loc=0, size=1)[0]
                     observedPhotometry = truePhotometry + perturbation
                     outputPhotometry[columnName] = observedPhotometry
@@ -333,15 +343,15 @@ class population:
             totalMass = 0
             id = 0
             samples = list()
-            with tqdm(desc="Sampling...", disable=not self.pbar) as pbar:
+            with tqdm(desc="Sampling", disable=not self.pbar) as pbar:
                 while totalMass <= self.targetMass:
                     isBinary = np.random.choice([True, False], p=[self.bf, 1 - self.bf])
                     whichPop = np.random.randint(0, len(self.isoNP), 1)[0]
                     photometry, mass = self._sample(
-                        ages[id % 990], whichPop, binary=isBinary
+                        ages[id % ageCacheSize - 10], whichPop, binary=isBinary
                     )
                     id += 1
-                    if id >= 990:
+                    if id >= ageCacheSize - 10:
                         ages = self.age.sample(ageCacheSize)
                     totalMass += mass
                     samples.append(photometry)
@@ -353,9 +363,8 @@ class population:
                             )
                         )
                         pbar.refresh()
-
-            survivingStars = list()
             if completnessMagName is not None and self.artStar is not None:
+                survivingStars = list()
                 for star in tqdm(samples):
                     p = np.random.uniform(0, 1)
                     completnessCheck = self.artStar.completness(
@@ -364,7 +373,9 @@ class population:
                     if p < completnessCheck:
                         survivingStars.append(star)
 
-            self._data = samples
+                self._data = survivingStars
+            else:
+                self._data = samples
             self._hasData = True
             self._totalMass = totalMass
         else:
