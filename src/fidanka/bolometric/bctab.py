@@ -156,7 +156,7 @@ class BolometricCorrector:
         logger = get_logger(
             "fidanka.bolometric.BolometricCorrector._build_interpolators"
         )
-        logger.info("Building Interpolators")
+        logger.debug("Building Interpolators")
 
         # Assuming Teff.shape[0] is the same as corrections.shape[0]
         magnitudes = np.zeros(shape=(corrections.shape[0], corrections.shape[1] - 2))
@@ -189,7 +189,7 @@ class BolometricCorrector:
                 except Exception as exc:
                     logger.error(f"MagID {magID} generated an exception: {exc}")
 
-        logger.info("Interpolators Built!")
+        logger.debug("Interpolators Built!")
         return interpCache
 
     def _get_mags(self, Teff, logg, logL, corrections, interpolators):
@@ -279,7 +279,7 @@ class BolometricCorrector:
         filterIDs = self._resolve_filter_IDs(filters)
 
         if self._check_cache(Av, Rv, filters):
-            self.logger.info(f"Extinction Cache Hit! (Av: {Av:0.2f}, Rv: {Rv:0.2f})")
+            self.logger.debug(f"Extinction Cache Hit! (Av: {Av:0.2f}, Rv: {Rv:0.2f})")
             targetBC = self._cache["targetBC"]
             interpolators = self._cache["interpolator"]
         else:

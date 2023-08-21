@@ -7,7 +7,7 @@ import numpy.typing as npt
 import pandas as pd
 from scipy.interpolate import interp1d
 from scipy.optimize import dual_annealing, minimize
-from scipy.optimize import OptimizeResult
+from scipy.optimize import OptimizeResult, minimize_scalar
 from scipy.spatial.distance import euclidean
 from tqdm import tqdm
 
@@ -18,6 +18,10 @@ from fidanka.isochrone.MIST import read_iso_metadata
 from fidanka.isochrone.isochrone import shift_isochrone
 from fidanka.isochrone.isochrone import interp_isochrone_age
 from fidanka.misc.utils import get_logger
+from fidanka.misc.logging import LoggerManager
+
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from queue import Queue
 
 FARRAY_1D = npt.NDArray[np.float64]
 R2_VECTOR = npt.NDArray[[np.float64, np.float64]]
@@ -25,6 +29,8 @@ FARRAY_2D_2C = npt.NDArray[[FARRAY_1D, FARRAY_1D]]
 
 CHI2R = dict[str, Any]
 ORT = Tuple[float, Tuple[float, float, float], str, float, float]
+
+BOUNDSDICT = {0: [2, 25], 1: [0.0001, 2], 2: [1, 30]}
 
 
 def guess_mu(
@@ -631,3 +637,241 @@ def fit_isochrone_to_population(
     orderedOptimizationResults = order_best_fit_result(results)
     out = {"bf": orderedOptimizationResults, "r": results}
     return out
+
+
+def shortest_distance_from_point_to_function(x, y, f):
+    """
+    Computes the shortest distance from a point (x, y) to the curve defined by function f.
+    Returns the distance and the closest point on the function.
+
+    Parameters
+    ----------
+    x : float
+        The x-coordinate of the point.
+    y : float
+        The y-coordinate of the point.
+    f : callable
+        Function of one variable.
+
+    Returns
+    -------
+    distance : float
+        The shortest distance from the point to the curve.
+    closest_point : tuple
+        The closest point on the curve, as a tuple (x, f(x)).
+
+    """
+
+    def distance(x2):
+        return np.sqrt((x2 - x) ** 2 + (f(x2) - y) ** 2)
+
+    result = minimize_scalar(distance)
+
+    return result.fun, (result.x, f(result.x))
+
+
+def shortest_distance_with_endpoints(f1, f2, domain):
+    """
+    Compute the pointwise shortest distance and endpoints between two functions over a domain.
+
+    Parameters
+    ----------
+    f1 : callable
+        Function of one variable.
+    f2 : callable
+        Function of one variable.
+    domain : tuple
+        Tuple containing (start, end, num_points), which defines the range and discretization.
+
+    Returns
+    -------
+    distances : ndarray
+        Pointwise shortest distances between the two functions over the domain.
+    endpoints : list of tuple
+        Each tuple contains the starting and ending point of the shortest line segment.
+
+    """
+
+    distances = []
+    endpoints = []
+    for x in domain:
+        dist, endpt = shortest_distance_from_point_to_function(x, f1(x), f2)
+        distances.append(dist)
+        endpoints.append(((x, f1(x)), endpt))
+
+    return np.array(distances), endpoints
+
+
+def iterative_objective(
+    r,
+    bc,
+    iso,
+    fiducial,
+    domain,
+    ageChi2=False,
+    filters=("WFC3_UVIS_F606W", "WFC3_UVIS_F814W"),
+    rFilterOrder=True,
+):
+    logger = get_logger("")
+    mu = r[0]
+    Av = r[1]
+    age = r[2]
+    isoAtAge = interp_isochrone_age(iso, age)
+    logger.debug(f"mu: {mu}, Av: {Av}, age: {age}, ageChi2: {ageChi2}")
+
+    # Could obtimize this by removing the casting to and from pandas
+    header = iso[list(iso.keys())[0]].columns
+    isoAtAge = pd.DataFrame(isoAtAge, columns=header)
+
+    corrected = bc.apparent_mags(
+        10 ** isoAtAge["log_Teff"].values,
+        isoAtAge["log_g"].values,
+        isoAtAge["log_L"].values,
+        mu=mu,
+        Av=Av,
+        filters=filters,
+    )
+    color = corrected[filters[0]] - corrected[filters[1]]
+    if rFilterOrder:
+        mag = corrected[filters[1]]
+    else:
+        mag = corrected[filters[0]]
+    isoF = interp1d(mag, color, bounds_error=False, fill_value="extrapolate")
+    shortest_distances, line_endpoints = shortest_distance_with_endpoints(
+        fiducial, isoF, domain
+    )
+    if ageChi2:
+        chi2 = (
+            np.sqrt(np.sum(shortest_distances))
+            + (np.max(shortest_distances) - np.min(shortest_distances))
+        ) * np.std(shortest_distances)
+    else:
+        chi2 = np.sqrt(np.sum(shortest_distances)) / shortest_distances.shape[0]
+    logger.info(f"Chi2 {chi2}")
+    return chi2
+
+
+def iterative_optimize(
+    bounds,
+    iso,
+    fiducial,
+    domain,
+    bc,
+    filters=("WFC3_UVIS_F275W", "WFC3_UVIS_F814W"),
+    rFilterOrder=True,
+):
+    logger = get_logger("iterative_optimize")
+    initGuesses = [(x[0] + x[1]) / 2 for x in bounds]
+    for vID, (bound, guess) in enumerate(zip(bounds, initGuesses)):
+        logger.info(f"Optimizing {vID} with bounds {bound}")
+        o = lambda x: iterative_objective(
+            [ig if ID != vID else x[0] for ID, ig in enumerate(initGuesses)],
+            bc,
+            iso,
+            fiducial,
+            domain,
+            ageChi2=True if vID == 2 else False,
+            filters=filters,
+            rFilterOrder=rFilterOrder,
+        )
+        r = minimize(o, bound[0])
+        initGuesses[vID] = r.x[0]
+    logger.info(f"Initial guesses: {initGuesses}")
+    r = minimize(
+        lambda r: iterative_objective(
+            r,
+            bc,
+            iso,
+            fiducial,
+            domain,
+            ageChi2=False,
+            filters=("WFC3_UVIS_F275W", "WFC3_UVIS_F814W"),
+            rFilterOrder=True,
+        ),
+        initGuesses,
+        tol=0.002,
+        bounds=([5, None], [0.001, 1], [1, 25]),
+    )
+    logger.info(f"Final Optimized Parameters: {r.x}")
+    return r
+
+
+def parallel_optimize(
+    bounds,
+    iso_list,
+    fiducialLine,
+    bc,
+    filters=("WFC3_UVIS_F275W", "WFC3_UVIS_F814W"),
+    rFilterOrder=True,
+):
+    logger = get_logger("parralel optimization")
+    results = []
+
+    logger.info("Spinning up process pool")
+    fFunc = interp1d(
+        fiducialLine.mean[1],
+        fiducialLine.mean[0],
+        bounds_error=False,
+        fill_value="extrapolate",
+    )
+    domain = np.arange(np.min(fiducialLine.mean[1]), np.max(fiducialLine.mean[1]), 0.05)
+    with ProcessPoolExecutor() as executor, tqdm(total=len(iso_list)) as pbar:
+        futures = {
+            executor.submit(
+                iterative_optimize,
+                bounds,
+                iso,
+                fFunc,
+                domain,
+                bc,
+                filters,
+                rFilterOrder,
+            ): iso
+            for iso in iso_list
+        }
+
+        for future in as_completed(futures):
+            logger.info("Completed optimization for isochrone, collecting result")
+            result = future.result()
+            results.append(result)
+
+            # Update progress bar
+            pbar.update(1)
+    logger.info("Finished optimization")
+
+    return results
+
+
+if __name__ == "__main__":
+    import logging
+    import pickle as pkl
+
+    with open(
+        "../../../../../GraduateSchool/Thesis/GCConsistency/NGC2808/Analysis/fiducial/ngc2808fiducials.pkl",
+        "rb",
+    ) as f:
+        fiducial = pkl.load(f)
+    bounds = [[5, 20], [0.001, 1], [7, 20]]
+    import pathlib
+
+    isoList = list(
+        pathlib.Path(
+            "../../../../../GraduateSchool/Thesis/GCConsistency/NGC2808/outputs.denseAlpha.fixedLowmass/PopA+0.27"
+        ).rglob("isochrones.txt")
+    )
+    from fidanka.isochrone.MIST import read_iso
+
+    isoList = [read_iso(path) for path in isoList]
+
+    from fidanka.bolometric.bctab import BolometricCorrector
+
+    bc = BolometricCorrector("WFC3", -0.9)
+
+    parallel_optimize(
+        bounds,
+        isoList,
+        fiducial[1],
+        bc,
+        filters=("WFC3_UVIS_F275W", "WFC3_UVIS_F814W"),
+        rFilterOrder=True,
+    )
