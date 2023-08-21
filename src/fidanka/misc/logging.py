@@ -77,6 +77,8 @@ class LoggerManager:
         logging.Logger
             The logger object.
         """
+        if cls._instance is None:
+            cls()
         return cls._instance.logger
 
     @classmethod

@@ -6,7 +6,6 @@ from fidanka.bolometric.load import (
     get_MIST_paths_FeH,
     fetch_MIST_bol_table,
 )
-from fidanka.bolometric.color import get_mags
 from fidanka.misc.utils import closest, interpolate_arrays
 from fidanka.misc.utils import get_logger
 
@@ -21,7 +20,12 @@ from hashlib import sha256
 from typing import Dict, List, Union, Tuple
 from collections.abc import Sequence
 
+from scipy.interpolate import RegularGridInterpolator, LinearNDInterpolator
+from concurrent.futures import ProcessPoolExecutor
+import concurrent
+
 RKE = re.compile(r"Av=(\d+\.\d+):Rv=(\d+\.\d+)")
+SOLBOL = 4.75
 
 
 class BolometricCorrector:
@@ -109,8 +113,12 @@ class BolometricCorrector:
         self._cacheMisses = 0
         self.logger.info("Cache Initialized!")
 
-    def _check_cache(self, Av, Rv):
-        cacheHash = sha256(np.array([Av, Rv]).tobytes()).hexdigest()
+    def _check_cache(self, Av, Rv, filters):
+        if filters == None:
+            filters = self.filters
+        cacheHash = sha256(
+            np.array([Av, Rv]).tobytes() + "".join(filters).encode("utf8")
+        ).hexdigest()
         if cacheHash == self._cacheHash:
             self._cacheHits += 1
             return True
@@ -122,11 +130,102 @@ class BolometricCorrector:
     def _reset_cache(self):
         self._cache = {
             "targetBC": None,
+            "interpolator": None,
         }
         self._cacheHash = None
 
-    def _update_cache_hash(self, Av, Rv):
-        self._cacheHash = sha256(np.array([Av, Rv]).tobytes()).hexdigest()
+    def _update_cache_hash(self, Av, Rv, filters):
+        if filters == None:
+            filters = self.filters
+        self._cacheHash = sha256(
+            np.array([Av, Rv]).tobytes() + "".join(filters).encode("utf8")
+        ).hexdigest()
+
+    def _build_single_interpolator(self, magID, tabTeff, tabLogg, tabMag, TMask, gMask):
+        tabMask = np.isnan(tabMag)
+        imask = np.logical_or(TMask, gMask, tabMask)
+        mask = np.logical_not(imask)
+
+        tabTeff, tabLogg, tabMag = tabTeff[mask], tabLogg[mask], tabMag[mask]
+        i, o = np.vstack((tabTeff, tabLogg)).T, tabMag
+
+        interpFunc = LinearNDInterpolator(i, o)
+        return magID, interpFunc
+
+    def _build_interpolators(self, corrections):
+        logger = get_logger(
+            "fidanka.bolometric.BolometricCorrector._build_interpolators"
+        )
+        logger.info("Building Interpolators")
+
+        # Assuming Teff.shape[0] is the same as corrections.shape[0]
+        magnitudes = np.zeros(shape=(corrections.shape[0], corrections.shape[1] - 2))
+
+        tabTeff = corrections[:, 0]
+        tabLogg = corrections[:, 1]
+        TMask, gMask = np.isnan(tabTeff), np.isnan(tabLogg)
+
+        interpCache = dict()
+
+        with ProcessPoolExecutor() as executor:
+            futures = {
+                executor.submit(
+                    self._build_single_interpolator,
+                    magID,
+                    tabTeff,
+                    tabLogg,
+                    corrections[:, magID + 2],
+                    TMask,
+                    gMask,
+                ): magID
+                for magID, _ in enumerate(magnitudes.T)
+            }
+
+            for future in concurrent.futures.as_completed(futures):
+                magID = futures[future]
+                try:
+                    magID, interpFunc = future.result()
+                    interpCache[magID] = interpFunc
+                except Exception as exc:
+                    logger.error(f"MagID {magID} generated an exception: {exc}")
+
+        logger.info("Interpolators Built!")
+        return interpCache
+
+    def _get_mags(self, Teff, logg, logL, corrections, interpolators):
+        """
+        Get the magnitudes of a star given its Teff, logg, logL, and bolometric
+        correction table.
+
+        Parameters
+        ----------
+        Teff : float
+            Effective temperature of the star in Kelvin.
+        logg : float
+            log10 of the surface gravity of the star in cgs units.
+        logL : float
+            log10 of the luminosity of the star in cgs units.
+        table : pandas.DataFrame
+            Bolometric correction table for a given metallicity, Av, and Rv.
+
+        Returns
+        -------
+        magnitudes : dict
+            Dictionary of magnitudes for each filter in the bolometric correction
+        """
+        magnitudes = np.zeros(shape=(Teff.shape[0], corrections.shape[1] - 2))
+        for magID, _ in enumerate(magnitudes.T):
+            interpFunc = interpolators[magID]
+            magnitudes[:, magID] = SOLBOL - 2.5 * logL - interpFunc(Teff, logg)
+        return magnitudes
+
+    def _resolve_filter_IDs(self, filters: Union[None, Tuple[str]]):
+        if filters is None:
+            return self.filterKeyIDs[2:]
+        filterIDs = [
+            self.filterKeyIDs[self.fullFilterNames.index(i)] + 2 for i in filters
+        ]
+        return filterIDs
 
     def apparent_mags(
         self,
@@ -136,6 +235,7 @@ class BolometricCorrector:
         Av: float = 0,
         Rv: float = 3.1,
         mu: float = 0,
+        filters: Union[None, Tuple[str]] = None,
     ) -> Dict[str, npt.NDArray]:
         """
         Get the apparent magnitudes at a given Teff, Logg, and LogL using
@@ -176,17 +276,20 @@ class BolometricCorrector:
         """
         # Get the Tables with the correct Av from the upper and lower bounding
         # metallicity tables
-        if self._check_cache(Av, Rv):
+        filterIDs = self._resolve_filter_IDs(filters)
+
+        if self._check_cache(Av, Rv, filters):
             self.logger.info(f"Extinction Cache Hit! (Av: {Av:0.2f}, Rv: {Rv:0.2f})")
             targetBC = self._cache["targetBC"]
+            interpolators = self._cache["interpolator"]
         else:
             self._reset_cache()
-            self._update_cache_hash(Av, Rv)
+            self._update_cache_hash(Av, Rv, filters)
 
             lowerAv, upperAv = closest(self.Av, Av)
             upperKey, lowerKey = (upperAv, Rv), (lowerAv, Rv)
-            upperAvTab = self.BCTabs[upperKey]
-            lowerAvTab = self.BCTabs[lowerKey]
+            upperAvTab = self.BCTabs[upperKey][:, [0, 1] + filterIDs]
+            lowerAvTab = self.BCTabs[lowerKey][:, [0, 1] + filterIDs]
 
             if upperKey == lowerKey:
                 targetBC = upperAvTab
@@ -195,12 +298,16 @@ class BolometricCorrector:
                     lowerAvTab, upperAvTab, Av, lowerAv, upperAv
                 )
 
-            targetBC = targetBC[:, self.filterKeyIDs]
+            # targetBC = targetBC[:, self.filterKeyIDs]
             self._cache["targetBC"] = targetBC
+            interpolators = self._build_interpolators(targetBC)
+            self._cache["interpolator"] = interpolators
 
         # get the magnitudes corrected for interstellar reddening
         try:
-            dustCorrectedMags = get_mags(Teff, logg, logL, targetBC)
+            dustCorrectedMags = self._get_mags(
+                Teff, logg, logL, targetBC, interpolators
+            )
         except Exception as e:
             self.logger.error(f"Av: {Av}, Rv: {Rv}")
             self.logger.error(f"mu: {mu}")
@@ -211,7 +318,9 @@ class BolometricCorrector:
         # get the magnitudes corrected for distance modulus
         dustDistCorrectedMags = {
             filterName: mag + mu
-            for filterName, mag in zip(self.filters, dustCorrectedMags.T)
+            for filterName, mag in zip(
+                map(lambda x: self.header[x], filterIDs), dustCorrectedMags.T
+            )
         }
         return pd.DataFrame(dustDistCorrectedMags)
 
@@ -225,10 +334,21 @@ if __name__ == "__main__":
     # root = "/home/tboudreaux/d/Astronomy/GraduateSchool/Thesis/GCConsistency/NGC2808/bolTables/HSTWFC3/"
     # filenames = list(filter(lambda x: re.search("feh[mp]\d+", x), os.listdir(root)))
     # paths = list(map(lambda x: os.path.join(root, x), filenames))
-    bol = BolometricCorrector("JWST", 1.0)
+    bol = BolometricCorrector("WFC3", 1.0)
 
-    Teff = np.array([5000])
-    logg = np.array([2.0])
-    logL = np.array([3.0])
+    Teff = np.random.uniform(high=5000, low=3000, size=(341))
+    logL = np.random.uniform(high=2.3, low=-1.9, size=(341))
+    logg = np.random.uniform(high=5, low=1.7, size=(341))
+
+    for i in range(3):
+        mags = bol.apparent_mags(
+            Teff,
+            logg,
+            logL,
+            mu=15,
+            Av=0.1 * i,
+            filters=("WFC3_UVIS_F275W", "WFC3_UVIS_F814W"),
+        )
+    print(mags)
 
     # print(bol.apparent_mags(Teff, logg, logL, Av=0.156, mu=1))
