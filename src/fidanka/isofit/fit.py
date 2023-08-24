@@ -14,7 +14,7 @@ from tqdm import tqdm
 from fidanka.bolometric.bctab import BolometricCorrector
 from fidanka.fiducial import fiducial_line
 from fidanka.fiducial.fiducial import fiducial_line
-from fidanka.isochrone.MIST import read_iso_metadata
+from fidanka.isochrone.MIST import read_iso, read_iso_metadata
 from fidanka.isochrone.isochrone import shift_isochrone
 from fidanka.isochrone.isochrone import interp_isochrone_age
 from fidanka.misc.utils import get_logger
@@ -867,7 +867,6 @@ if __name__ == "__main__":
             "../../../../../GraduateSchool/Thesis/GCConsistency/NGC2808/outputs.denseAlpha.fixedLowmass/PopA+0.27"
         ).rglob("isochrones.txt")
     )[:3]
-    from fidanka.isochrone.MIST import read_iso
 
     # isoList = [read_iso(path) for path in isoList]
 
