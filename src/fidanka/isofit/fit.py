@@ -798,12 +798,13 @@ def iterative_optimize(
 
 def parallel_optimize(
     bounds,
-    iso_list,
+    isopath_list,
     fiducialLine,
     bc,
     filters=("WFC3_UVIS_F275W", "WFC3_UVIS_F814W"),
     rFilterOrder=True,
 ):
+    iso_list = [read_iso(path) for path in isopath_list]
     logger = get_logger("parralel optimization")
     results = []
 
@@ -826,14 +827,21 @@ def parallel_optimize(
                 bc,
                 filters,
                 rFilterOrder,
-            ): iso
-            for iso in iso_list
+            ): (iso, path)
+            for iso, path in zip(iso_list, isopath_list)
         }
 
         for future in as_completed(futures):
             logger.info("Completed optimization for isochrone, collecting result")
-            result = future.result()
-            results.append(result)
+            try:
+                result = future.result()
+                results.append({futures[future][1]: result})
+                logger.info("Completed Optimization for isochrone.")
+            except Exception as e:
+                results.append({futures[future][1]: None})
+                logger.error(
+                    f"Error Processing isochrone {futures[future][1]}. Exception {e}"
+                )
 
             # Update progress bar
             pbar.update(1)
@@ -858,16 +866,16 @@ if __name__ == "__main__":
         pathlib.Path(
             "../../../../../GraduateSchool/Thesis/GCConsistency/NGC2808/outputs.denseAlpha.fixedLowmass/PopA+0.27"
         ).rglob("isochrones.txt")
-    )
+    )[:3]
     from fidanka.isochrone.MIST import read_iso
 
-    isoList = [read_iso(path) for path in isoList]
+    # isoList = [read_iso(path) for path in isoList]
 
     from fidanka.bolometric.bctab import BolometricCorrector
 
     bc = BolometricCorrector("WFC3", -0.9)
 
-    parallel_optimize(
+    results = parallel_optimize(
         bounds,
         isoList,
         fiducial[1],
@@ -875,3 +883,4 @@ if __name__ == "__main__":
         filters=("WFC3_UVIS_F275W", "WFC3_UVIS_F814W"),
         rFilterOrder=True,
     )
+    print(results)
