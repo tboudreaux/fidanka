@@ -835,10 +835,10 @@ def parallel_optimize(
             logger.info("Completed optimization for isochrone, collecting result")
             try:
                 result = future.result()
-                results.append({futures[future][1]: result})
+                results.append((futures[future][1], result))
                 logger.info("Completed Optimization for isochrone.")
             except Exception as e:
-                results.append({futures[future][1]: None})
+                results.append((futures[future][1], None))
                 logger.error(
                     f"Error Processing isochrone {futures[future][1]}. Exception {e}"
                 )
