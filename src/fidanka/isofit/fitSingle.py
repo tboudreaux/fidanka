@@ -1,9 +1,13 @@
+from scipy.optimize import minimize
 from fidanka.bolometric.bctab import BolometricCorrector
 from fidanka.isochrone.MIST import read_iso, read_iso_metadata
 from fidanka.misc.logging import LoggerManager
 from fidanka.misc.utils import interpolate_arrays
+from fidanka.isochrone.isochrone import interp_isochrone_age
+from fidanka.isofit.fit import shortest_distance_from_point_to_function
 
 from scipy.spatial.distance import cdist
+from scipy.interpolate import interp1d
 from collections import deque
 
 import numpy as np
@@ -65,6 +69,40 @@ def interpolate_iso_to_single_star_FeH(isochroneSet, FeH):
     return newIso
 
 
+def get_point_iso_dist(starColor, starMag, isoAtAge, fKey1, fKey2, rFilterOrder=False):
+    isoColor = isoAtAge[fKey1] - isoAtAge[fKey2]
+    if rFilterOrder:
+        isoMag = isoAtAge[fKey2]
+    else:
+        isoMag = isoAtAge[fKey1]
+    isoF = interp1d(isoMag, isoColor, bounds_error=False, fill_value="extrapolate")
+    dist = shortest_distance_from_point_to_function(starMag, starColor, isoF)
+    return dist
+
+
+def get_dist_between_iso_and_star_at_age(
+    iso, age, starColor, starMag, fKey1, fKey2, rFilterOrder=False
+):
+    isoHeader = iso[list(iso.keys())[0]].columns
+    isoAtAge = interp_isochrone_age(iso, age)
+    isoAtAge = pd.DataFrame(isoAtAge, columns=isoHeader)
+    dist = get_point_iso_dist(
+        starColor, starMag, isoAtAge, fKey1, fKey2, rFilterOrder=rFilterOrder
+    )
+    return dist[0]
+
+
+def get_init_age_guess(iso, starColor, starMag, fKey1, fKey2, rFilterOrder=False):
+    guesses = list()
+    for age, isoAtAge in iso.items():
+        dist = get_point_iso_dist(
+            starColor, starMag, isoAtAge, fKey1, fKey2, rFilterOrder=rFilterOrder
+        )
+        guesses.append((age / 1e9, dist))
+    guesses = sorted(guesses, key=lambda x: x[1])
+    return guesses[0][0]
+
+
 def estimate_single_star_age(
     starColor,
     starMag,
@@ -77,12 +115,9 @@ def estimate_single_star_age(
     mu=0,
     Av=0,
     Rv=3.1,
+    ageBounds=[5, 15],
 ):
     logger = LoggerManager.get_logger()
-    if rFilterOrder:
-        f3Key = f1Key
-    else:
-        f3Key = f2Key
 
     if bcFilterSystem is not None:
         logger.info("Applying Bolometric Correction to Isochrone")
@@ -102,51 +137,31 @@ def estimate_single_star_age(
         logger.info("No Bolometric Correction Applied")
         iso = isochrones
     # bound the age of the point between two isochrones before optimizing it
-    bounds = [(np.inf, None), (np.inf, None)]
-    ax = plt.gca()
-    for age, isoAtAge in iso.items():
-        color = isoAtAge[f1Key] - isoAtAge[f2Key]
-        mag = isoAtAge[f3Key]
-        minDist = np.min(
-            cdist(
-                np.array([starColor, starMag]).reshape(1, -1), np.array([color, mag]).T
-            )
-        )
-
-        # get the direction of the minium distance point from starColor and starMag
-        # if the point is above the isochrone, the distance is negative
-        direction = np.sign(
-            mag[
-                np.argmin(
-                    cdist(
-                        np.array([starColor, starMag]).reshape(1, -1),
-                        np.array([color, mag]).T,
-                    )
-                )
-            ]
-            - starMag
-        )
-
-        print(f"Age: {age}, Distance: {minDist}, Direction: {direction}")
-        if direction > 0 and bounds[0][0] > minDist:
-            bounds[1] = (minDist, age, (color, mag))
-        elif direction < 0 and bounds[1][0] > minDist:
-            bounds[0] = (minDist, age, (color, mag))
-
-    ax.plot(bounds[0][2][0], bounds[0][2][1], ".", color="k", alpha=0.25)
-    ax.plot(bounds[1][2][0], bounds[1][2][1], ".", color="k", alpha=0.25)
+    initAgeGuess = get_init_age_guess(
+        iso, starColor, starMag, f1Key, f2Key, rFilterOrder=rFilterOrder
+    )
+    minResults = minimize(
+        lambda age: get_dist_between_iso_and_star_at_age(
+            iso,
+            age,
+            starColor,
+            starMag,
+            fKey1=f1Key,
+            fKey2=f2Key,
+            rFilterOrder=rFilterOrder,
+        ),
+        initAgeGuess,
+        bounds=[ageBounds],
+    )
+    return minResults
 
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     LoggerManager.config_logger("Validate_singleStarFit.log")
     # testIsochrone = "../../../../localTests/testData/isos/MIST/MIST_v1.2_feh_p0.00_afe_p0.0_vvcrit0.4_HST_WFC3.iso.cmd"
     testIsochrone = "../../../../localTests/fidanka/validation/isos/PopA+0.24.txt"
     iso, meta = read_iso(testIsochrone), read_iso_metadata(testIsochrone)
     testStar = (0.46, 1.18)
-    ax.plot(testStar[0], testStar[1], "o", color="r")
     FeH = 0.24
 
     import pathlib
@@ -154,7 +169,7 @@ if __name__ == "__main__":
     isos = pathlib.Path("../../../../localTests/testData/isos/MIST/").glob("*.iso.cmd")
     isoAtFeH = interpolate_iso_to_single_star_FeH(isos, FeH)
 
-    estimate_single_star_age(
+    age = estimate_single_star_age(
         testStar[0], testStar[1], isoAtFeH, FeH, "WFC3_UVIS_F606W", "WFC3_UVIS_F814W"
     )
-    plt.show()
+    print(age)
