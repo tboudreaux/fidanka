@@ -117,6 +117,46 @@ def estimate_single_star_age(
     Rv=3.1,
     ageBounds=[5, 15],
 ):
+    """
+    Estimate the age of a single star based on its color, magnitude, and isochrones.
+
+    Parameters
+    ----------
+    starColor : float
+        The color index of the star.
+    starMag : float
+        The apparent magnitude of the star.
+    isochrones : dict
+        A dictionary containing age-related theoretical isochrones.
+    FeH : float
+        Metallicity [Fe/H] of the star.
+    f1Key : str
+        The key for filter 1 in the isochrone data.
+    f2Key : str
+        The key for filter 2 in the isochrone data.
+    rFilterOrder : bool, default=False
+        Whether to reverse the filter order.
+    bcFilterSystem : str, default=None
+        The filter system to use for bolometric corrections.
+    mu : float, default=0
+        The distance modulus.
+    Av : float, default=0
+        The extinction in magnitudes.
+    Rv : float, default=3.1
+        The ratio of total to selective extinction.
+    ageBounds : list, default=[5, 15]
+        The lower and upper age bounds for the estimation.
+
+    Returns
+    -------
+    scipy.optimize.OptimizeResult
+        The results of the optimization to find the estimated age.
+
+    Notes
+    -----
+    - If `bcFilterSystem` is provided, bolometric corrections are applied to the isochrones.
+    - The function uses the `minimize` function from `scipy.optimize` to optimize the age estimate.
+    """
     logger = LoggerManager.get_logger()
 
     if bcFilterSystem is not None:
