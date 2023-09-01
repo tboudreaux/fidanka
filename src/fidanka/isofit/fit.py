@@ -716,8 +716,11 @@ def iterative_objective(
     mu = r[0]
     Av = r[1]
     age = r[2]
+
+    if Av < 0 or Av > 10 or age < 0 or mu < 0:
+        return np.inf
     isoAtAge = interp_isochrone_age(iso, age)
-    logger.debug(f"mu: {mu}, Av: {Av}, age: {age}, ageChi2: {ageChi2}")
+    logger.info(f"mu: {mu}, Av: {Av}, age: {age}, ageChi2: {ageChi2}")
 
     # Could obtimize this by removing the casting to and from pandas
     header = iso[list(iso.keys())[0]].columns
@@ -759,9 +762,21 @@ def iterative_optimize(
     bc,
     filters=("WFC3_UVIS_F275W", "WFC3_UVIS_F814W"),
     rFilterOrder=True,
+    getChi2Dist=False,
 ):
     logger = get_logger("iterative_optimize")
     initGuesses = [(x[0] + x[1]) / 2 for x in bounds]
+    outputDist = [[[], []], [[], []], [[], []]]
+
+    def chi2_wrapper(x, o, vID):
+        chi2 = o(x)
+        x = x[0]
+        if getChi2Dist:
+            print(f"Appending {x} to {vID} with chi2 {chi2}")
+            outputDist[vID][0].append(x)
+            outputDist[vID][1].append(chi2)
+        return chi2
+
     for vID, (bound, guess) in enumerate(zip(bounds, initGuesses)):
         logger.info(f"Optimizing {vID} with bounds {bound}")
         o = lambda x: iterative_objective(
@@ -774,7 +789,10 @@ def iterative_optimize(
             filters=filters,
             rFilterOrder=rFilterOrder,
         )
-        r = minimize(o, bound[0])
+        rGuess = np.random.uniform(low=bound[0], high=bound[1], size=1)[0]
+        r = minimize(
+            lambda x: chi2_wrapper(x, o, vID), bound[0], bounds=[(bound[0], None)]
+        )
         initGuesses[vID] = r.x[0]
     logger.info(f"Initial guesses: {initGuesses}")
     r = minimize(
@@ -793,7 +811,8 @@ def iterative_optimize(
         bounds=([5, None], [0.001, 1], [1, 25]),
     )
     logger.info(f"Final Optimized Parameters: {r.x}")
-    return r
+    output = (r, [np.array(x) for x in outputDist]) if getChi2Dist else r
+    return output
 
 
 def parallel_optimize(
@@ -803,6 +822,7 @@ def parallel_optimize(
     bc,
     filters=("WFC3_UVIS_F275W", "WFC3_UVIS_F814W"),
     rFilterOrder=True,
+    getChi2Dist=False,
 ):
     iso_list = [read_iso(path) for path in isopath_list]
     logger = get_logger("parralel optimization")
@@ -827,6 +847,7 @@ def parallel_optimize(
                 bc,
                 filters,
                 rFilterOrder,
+                getChi2Dist,
             ): (iso, path)
             for iso, path in zip(iso_list, isopath_list)
         }
@@ -835,6 +856,8 @@ def parallel_optimize(
             logger.info("Completed optimization for isochrone, collecting result")
             try:
                 result = future.result()
+                print(result)
+                exit()
                 results.append((futures[future][1], result))
                 logger.info("Completed Optimization for isochrone.")
             except Exception as e:
