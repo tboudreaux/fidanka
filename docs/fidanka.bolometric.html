@@ -10,7 +10,7 @@
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  
+
         <script src="_static/jquery.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
@@ -19,18 +19,18 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="fidanka.exception package" href="fidanka.exception.html" />
-    <link rel="prev" title="fidanka package" href="fidanka.html" /> 
+    <link rel="next" title="fidanka.bolometric.ext_data package" href="fidanka.bolometric.ext_data.html" />
+    <link rel="prev" title="fidanka package" href="fidanka.html" />
 </head>
 
-<body class="wy-body-for-nav"> 
+<body class="wy-body-for-nav">
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
 
-          
-          
+
+
           <a href="index.html" class="icon icon-home">
             fidanka
           </a>
@@ -48,7 +48,16 @@
 <li class="toctree-l1"><a class="reference internal" href="fidanka.isochrone.html">Isochrone</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fidanka.isofit.html">Fitting</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Bolometric</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="fidanka.bolometric.ext_data.html">fidanka.bolometric.ext_data package</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-fidanka.bolometric.URLS">fidanka.bolometric.URLS module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.URLS.get_valid_bol_table_URLS"><code class="docutils literal notranslate"><span class="pre">get_valid_bol_table_URLS()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.URLS.get_valid_bol_table_names"><code class="docutils literal notranslate"><span class="pre">get_valid_bol_table_names()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#module-fidanka.bolometric.bctab">fidanka.bolometric.bctab module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.bctab.BolometricCorrector"><code class="docutils literal notranslate"><span class="pre">BolometricCorrector</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#fidanka.bolometric.bctab.BolometricCorrector.apparent_mags"><code class="docutils literal notranslate"><span class="pre">BolometricCorrector.apparent_mags()</span></code></a></li>
@@ -58,14 +67,17 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-fidanka.bolometric.color">fidanka.bolometric.color module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.color.get_interpolated_FeHTable"><code class="docutils literal notranslate"><span class="pre">get_interpolated_FeHTable()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.color.get_mags"><code class="docutils literal notranslate"><span class="pre">get_mags()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-fidanka.bolometric.load">fidanka.bolometric.load module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.load.download_MIST_bol_table"><code class="docutils literal notranslate"><span class="pre">download_MIST_bol_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.load.fetch_MIST_bol_table"><code class="docutils literal notranslate"><span class="pre">fetch_MIST_bol_table()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.load.get_MIST_paths_FeH"><code class="docutils literal notranslate"><span class="pre">get_MIST_paths_FeH()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.load.load_bol_table"><code class="docutils literal notranslate"><span class="pre">load_bol_table()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.load.load_bol_table_metadata"><code class="docutils literal notranslate"><span class="pre">load_bol_table_metadata()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.load.load_sub_bol_table"><code class="docutils literal notranslate"><span class="pre">load_sub_bol_table()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.load.load_sub_table_metadata"><code class="docutils literal notranslate"><span class="pre">load_sub_table_metadata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.bolometric.load.verify_MIST_bol_tables"><code class="docutils literal notranslate"><span class="pre">verify_MIST_bol_tables()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-fidanka.bolometric">Module contents</a></li>
@@ -101,22 +113,81 @@
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-             
+
   <section id="fidanka-bolometric-package">
 <h1>fidanka.bolometric package<a class="headerlink" href="#fidanka-bolometric-package" title="Permalink to this heading"></a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fidanka.bolometric.ext_data.html">fidanka.bolometric.ext_data package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fidanka.bolometric.ext_data.html#module-fidanka.bolometric.ext_data">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
 <section id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
+</section>
+<section id="module-fidanka.bolometric.URLS">
+<span id="fidanka-bolometric-urls-module"></span><h2>fidanka.bolometric.URLS module<a class="headerlink" href="#module-fidanka.bolometric.URLS" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.bolometric.URLS.get_valid_bol_table_URLS">
+<span class="sig-prename descclassname"><span class="pre">fidanka.bolometric.URLS.</span></span><span class="sig-name descname"><span class="pre">get_valid_bol_table_URLS</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.bolometric.URLS.get_valid_bol_table_URLS" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.bolometric.URLS.get_valid_bol_table_names">
+<span class="sig-prename descclassname"><span class="pre">fidanka.bolometric.URLS.</span></span><span class="sig-name descname"><span class="pre">get_valid_bol_table_names</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.bolometric.URLS.get_valid_bol_table_names" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
 </section>
 <section id="module-fidanka.bolometric.bctab">
 <span id="fidanka-bolometric-bctab-module"></span><h2>fidanka.bolometric.bctab module<a class="headerlink" href="#module-fidanka.bolometric.bctab" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="fidanka.bolometric.bctab.BolometricCorrector">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fidanka.bolometric.bctab.</span></span><span class="sig-name descname"><span class="pre">BolometricCorrector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">FeH</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['F606W',</span> <span class="pre">'F814W']</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.bolometric.bctab.BolometricCorrector" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fidanka.bolometric.bctab.</span></span><span class="sig-name descname"><span class="pre">BolometricCorrector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paths</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">FeH</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bolTablePaths</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.bolometric.bctab.BolometricCorrector" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="fidanka.bolometric.bctab.BolometricCorrector.apparent_mags">
-<span class="sig-name descname"><span class="pre">apparent_mags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Teff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logL</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Av</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Rv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.bolometric.bctab.BolometricCorrector.apparent_mags" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">apparent_mags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Teff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logL</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Av</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Rv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.bolometric.bctab.BolometricCorrector.apparent_mags" title="Permalink to this definition"></a></dt>
+<dd><p>Get the apparent magnitudes at a given Teff, Logg, and LogL using
+a MIST formated bolometric correction table. If the requested Av is not
+in the table but is inbetween two values which are in the table then a
+table will be linearlly interpolated between its upper and lower
+neighbors. If the Av value is above  or below the domain of the tables
+then the table will be interpolatd using a line drawn through the two
+nearest tables extrapolated out. Finally, if Av is in the tale then
+that bolometric correction will simply be returned.</p>
+<p>The final results will be the magnitutes at the given Av, Rv, and mu
+for Teff, Logg, and LogL based on the FeH and Bolometric correction
+table provided at object instantiation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Teff</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Effective Temperature of the theoretical model</p></li>
+<li><p><strong>logg</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Log 10 surface gravity of the theoretical model</p></li>
+<li><p><strong>logL</strong> (<em>np.ndarray</em><em>[</em><em>np.float64</em><em>]</em>) – Log 10 surface bolometric luminiosity of the theoretical model</p></li>
+<li><p><strong>Av</strong> (<em>float</em><em>, </em><em>default=0</em>) – V band reddening</p></li>
+<li><p><strong>Rv</strong> (<em>float</em><em>, </em><em>default = 3.1</em>) – <dl class="simple">
+<dt>Specific extinction (Note: Currently, july 2023, the MIST tables</dt><dd><p>have only been computed for Rv=3.1)</p>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>mu</strong> (<em>float</em><em>, </em><em>default=0</em>) – Distance modulus.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>dustCorrectedMags</strong> – Dictionary of arrays of magnitudes parallel to Teff, logg, and logL.
+Each key is the name of a filter pulled from the given
+bolometric correction table</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str,np.ndarray[np.float64]]</p>
+</dd>
+</dl>
+</dd></dl>
 
 </dd></dl>
 
@@ -131,14 +202,119 @@ that mettallicity is not in the BC tables, linearlly interpolate between
 the two closest metallicity tables.</p>
 </dd></dl>
 
-<dl class="py function">
-<dt class="sig sig-object py" id="fidanka.bolometric.color.get_mags">
-<span class="sig-prename descclassname"><span class="pre">fidanka.bolometric.color.</span></span><span class="sig-name descname"><span class="pre">get_mags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Teff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logL</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">BCTab</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.bolometric.color.get_mags" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
 </section>
 <section id="module-fidanka.bolometric.load">
 <span id="fidanka-bolometric-load-module"></span><h2>fidanka.bolometric.load module<a class="headerlink" href="#module-fidanka.bolometric.load" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.bolometric.load.download_MIST_bol_table">
+<span class="sig-prename descclassname"><span class="pre">fidanka.bolometric.load.</span></span><span class="sig-name descname"><span class="pre">download_MIST_bol_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ID</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.bolometric.load.download_MIST_bol_table" title="Permalink to this definition"></a></dt>
+<dd><p>Download bolometric correction tables from the MIST
+data-products site. Valid keys can be checked with
+fidanka.bolometric.URLS.get_valid_bol_table_names().</p>
+<p>By default files will be downloaded to ~/.fidanka/bol/MIST/
+however, this can be changed using the folder keyword argument.
+Note, this function will not extract or verify downloads.</p>
+<p>If the file already exists then nothing will be downloaded.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ID</strong> (<em>str</em>) – Name of bol correction table to fetch. Valid names can be
+checked using the fidanka.bolometric.URLS.get_valid_bol_table_names()
+function</p></li>
+<li><p><strong>folder</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>None</em><em>]</em><em>, </em><em>default=None</em>) – The folder to save bolometric correction tables too. By default
+this will be ~/.fidanka/bol/MIST/</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>filePath</strong> (<em>str</em>) – The path to the downloaded file</p></li>
+<li><p><strong>folder</strong> (<em>str</em>) – the folder where the file was saved to (same as the input
+parameter folder)</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If ID is not a key in the lookup_table.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>If you want to download the JWST bolometric correction tables to
+the default directory</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">download_MIST_bol_table</span><span class="p">(</span><span class="s2">&quot;JWST&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>then if you do</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ls</span> <span class="o">~/.</span><span class="n">fidanka</span><span class="o">/</span><span class="n">bol</span><span class="o">/</span><span class="n">MIST</span><span class="o">/</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Out</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">JWST</span><span class="o">.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.bolometric.load.fetch_MIST_bol_table">
+<span class="sig-prename descclassname"><span class="pre">fidanka.bolometric.load.</span></span><span class="sig-name descname"><span class="pre">fetch_MIST_bol_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ID</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.bolometric.load.fetch_MIST_bol_table" title="Permalink to this definition"></a></dt>
+<dd><p>Fetch (download, extract, and verify) bolometric correction tables for a given
+MIST table ID (valid names can be checked with
+fidanka.bolometric.URLS.get_valid_bol_table_names())</p>
+<p>First, a check will be done to check if files for a given ID have already
+been downloaded and extracted to &lt;folder&gt;. If so they will have their checksums
+validated. If all checks passed then the function will stop here.</p>
+<p>If some of the checks fail then the tarball will be redownloaded from
+the MIST website, these tarballs will then be extracted to some folder
+~/.fidanka/bol/MIST/&lt;ID&gt; (or more generally &lt;folder&gt;/&lt;ID&gt;).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ID</strong> (<em>str</em>) – Name of bol correction table to fetch. Valid names can be
+checked using the fidanka.bolometric.URLS.get_valid_bol_table_names()
+function</p></li>
+<li><p><strong>folder</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>None</em><em>]</em><em>, </em><em>default=None</em>) – The folder to save bolometric correction tables too. By default
+this will be ~/.fidanka/bol/MIST/</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>ID</strong> (<em>str</em>) – The MIST id requested</p></li>
+<li><p><strong>sfp</strong> (<em>str</em>) – Path to the “subfolder” where files are extracted too. This will
+be &lt;folder&gt;/&lt;ID&gt;. By default then ~/.fidanka/bol/MIST/&lt;ID&gt;</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<ul class="simple">
+<li><p>If the bolometric correction tables checksums cannot be validated after
+being downloaded and extracted</p></li>
+</ul>
+</div>
+<p class="rubric">Examples</p>
+<p>If you want to download the JWST bolometric correction tables to
+the default directory</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fetch_MIST_bol_table</span><span class="p">(</span><span class="s2">&quot;JWST&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>then if you do</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ls</span> <span class="o">~/.</span><span class="n">fidanka</span><span class="o">/</span><span class="n">bol</span><span class="o">/</span><span class="n">MIST</span><span class="o">/</span><span class="n">JWST</span>
+</pre></div>
+</div>
+<p>you should see all of the JWST bolometric correction tables, named like
+feh[m|p][0-9]{3}.JWST</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.bolometric.load.get_MIST_paths_FeH">
+<span class="sig-prename descclassname"><span class="pre">fidanka.bolometric.load.</span></span><span class="sig-name descname"><span class="pre">get_MIST_paths_FeH</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paths</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.bolometric.load.get_MIST_paths_FeH" title="Permalink to this definition"></a></dt>
+<dd><p>Given some list of paths to files names in the schema that the mist
+bolometric correction tables are named, parse out the FeH values for
+each table in the list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>paths</strong> – </p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="fidanka.bolometric.load.load_bol_table">
 <span class="sig-prename descclassname"><span class="pre">fidanka.bolometric.load.</span></span><span class="sig-name descname"><span class="pre">load_bol_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.bolometric.load.load_bol_table" title="Permalink to this definition"></a></dt>
@@ -213,6 +389,35 @@ correction table.</p>
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.bolometric.load.verify_MIST_bol_tables">
+<span class="sig-prename descclassname"><span class="pre">fidanka.bolometric.load.</span></span><span class="sig-name descname"><span class="pre">verify_MIST_bol_tables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paths</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#fidanka.bolometric.load.verify_MIST_bol_tables" title="Permalink to this definition"></a></dt>
+<dd><p>Verify extracted files from the MIST bolometric correction
+tables (based on their versions July 4th 2023). If all
+of the files given in paths match the checksums stashed in
+the fidanka package data then this function will return true
+otherwise this will return false.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>paths</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of paths to files. Each path must have a basename which exists within
+the stashed checksum file. This should include every bolometric correction
+table avalible from MIST as of July 4th 2023.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>okay</strong> – flag defining paths as either verified or not. If all files in the paths
+are both in the stashed checksums and the MD5 checksums of all files
+in paths match, then this will be true. In all other senarios this will
+return as false</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+<dt class="field-even">Warns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>- If a file in paths is not found in the stashed checksums then a warning will</strong> – be raised.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="module-fidanka.bolometric">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-fidanka.bolometric" title="Permalink to this heading"></a></h2>
@@ -224,7 +429,7 @@ correction table.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="fidanka.html" class="btn btn-neutral float-left" title="fidanka package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="fidanka.exception.html" class="btn btn-neutral float-right" title="fidanka.exception package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="fidanka.bolometric.ext_data.html" class="btn btn-neutral float-right" title="fidanka.bolometric.ext_data package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
@@ -236,7 +441,7 @@ correction table.</p>
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
+
 
 </footer>
         </div>
@@ -247,7 +452,7 @@ correction table.</p>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
 
 </body>
 </html>

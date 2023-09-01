@@ -1,8 +1,24 @@
 fidanka.bolometric package
 ==========================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   fidanka.bolometric.ext_data
+
 Submodules
 ----------
+
+fidanka.bolometric.URLS module
+------------------------------
+
+.. automodule:: fidanka.bolometric.URLS
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 fidanka.bolometric.bctab module
 -------------------------------

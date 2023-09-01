@@ -10,7 +10,7 @@
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  
+
         <script src="_static/jquery.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
@@ -20,17 +20,17 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="fidanka.isofit package" href="fidanka.isofit.html" />
-    <link rel="prev" title="fidanka.fiducial.methods package" href="fidanka.fiducial.methods.html" /> 
+    <link rel="prev" title="fidanka.fiducial.methods package" href="fidanka.fiducial.methods.html" />
 </head>
 
-<body class="wy-body-for-nav"> 
+<body class="wy-body-for-nav">
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
 
-          
-          
+
+
           <a href="index.html" class="icon icon-home">
             fidanka
           </a>
@@ -97,7 +97,7 @@
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-             
+
   <section id="fidanka-isochrone-package">
 <h1>fidanka.isochrone package<a class="headerlink" href="#fidanka-isochrone-package" title="Permalink to this heading"></a></h1>
 <section id="submodules">
@@ -223,21 +223,34 @@ linearlly from the upper and lower bounding aged isochrones</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="fidanka.isochrone.isochrone.load_ISO_CMDs">
-<span class="sig-prename descclassname"><span class="pre">fidanka.isochrone.isochrone.</span></span><span class="sig-name descname"><span class="pre">load_ISO_CMDs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">pandas.core.frame.DataFrame</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.isochrone.isochrone.load_ISO_CMDs" title="Permalink to this definition"></a></dt>
-<dd><p>Load pysep formated Isochrones into a lookup table indexed by population
-name helium mass fraction, and alpha enhancement.</p>
+<span class="sig-prename descclassname"><span class="pre">fidanka.isochrone.isochrone.</span></span><span class="sig-name descname"><span class="pre">load_ISO_CMDs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">root</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.isochrone.isochrone.load_ISO_CMDs" title="Permalink to this definition"></a></dt>
+<dd><p>Load the isochrone color-magnitude diagrams (CMDs) and metadata from a specified root directory.</p>
+<p>This function recursively searches the root directory for isochrone text files (“isochrones.txt”).
+It organizes the data by population type (PopA or PopE), helium content (Y), and alpha enhancement (alpha).
+It returns two nested dictionaries. The first contains the CMDs and the second contains the metadata
+corresponding to the CMDs.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>root</strong> (<em>str</em>) – Root to search for CMD.pkl files from</p>
+<dd class="field-odd"><p><strong>root</strong> (<em>str</em>) – The root directory to begin the search for “isochrones.txt” files.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>lookup</strong> – lookup table for pysep formated isochrones indexed by population
-name, helium mass fraction, and alpha enhancement.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>dict[str, dict[float, dict[float, pd.DataFrame]]]</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>lookup</strong> (<em>dict</em>) – A nested dictionary with the CMD data, indexed by the population type, helium content, and alpha
+enhancement. The structure is {population: {helium: {alpha: CMD}}}.</p></li>
+<li><p><strong>FeHLookup</strong> (<em>dict</em>) – A nested dictionary with the CMD metadata, indexed by the population type, helium content, and alpha
+enhancement. The structure is {population: {helium: {alpha: metadata}}}.</p></li>
+</ul>
+</p>
 </dd>
 </dl>
+<p class="rubric">Notes</p>
+<p>The function uses regular expressions to extract the population type, helium content, and alpha enhancement
+from the file path. It assumes the path is structured as follows: “Pop(A|E)+(Y)/alpha-(alpha)”.</p>
+<p>Progress bars from the tqdm module are displayed during the operation to provide visual feedback.</p>
+<p>The ‘read_iso’ and ‘read_iso_metadata’ functions are assumed to be available in the same scope.</p>
+<p>If a tuple of parameters (population, helium, alpha) is not found in the list of extracted parameters,
+it is skipped and not included in the dictionaries.</p>
+<p>The function uses the walrus operator ‘:=’ which is only available in Python 3.8 and later.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -299,7 +312,7 @@ isochrones that are in the HST filter order.</p></li>
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
+
 
 </footer>
         </div>
@@ -310,7 +323,7 @@ isochrones that are in the HST filter order.</p></li>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
 
 </body>
 </html>

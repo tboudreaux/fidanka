@@ -53,6 +53,17 @@
 <li class="toctree-l1"><a class="reference internal" href="fidanka.ext.html">C-Libs</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Misc</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-fidanka.misc.logging">fidanka.misc.logging module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.logging.LoggerManager"><code class="docutils literal notranslate"><span class="pre">LoggerManager</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#fidanka.misc.logging.LoggerManager._instance"><code class="docutils literal notranslate"><span class="pre">LoggerManager._instance</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fidanka.misc.logging.LoggerManager.get_logger"><code class="docutils literal notranslate"><span class="pre">LoggerManager.get_logger()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fidanka.misc.logging.LoggerManager.config_logger"><code class="docutils literal notranslate"><span class="pre">LoggerManager.config_logger()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id0"><code class="docutils literal notranslate"><span class="pre">LoggerManager.config_logger()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id1"><code class="docutils literal notranslate"><span class="pre">LoggerManager.get_logger()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#module-fidanka.misc.parallel">fidanka.misc.parallel module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.parallel.parallelize"><code class="docutils literal notranslate"><span class="pre">parallelize()</span></code></a></li>
 </ul>
@@ -62,6 +73,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.get_logger"><code class="docutils literal notranslate"><span class="pre">get_logger()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.get_samples"><code class="docutils literal notranslate"><span class="pre">get_samples()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.interpolate_arrays"><code class="docutils literal notranslate"><span class="pre">interpolate_arrays()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.interpolate_keyed_arrays"><code class="docutils literal notranslate"><span class="pre">interpolate_keyed_arrays()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.inverse_cdf_sample"><code class="docutils literal notranslate"><span class="pre">inverse_cdf_sample()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.measusre_perpendicular_distance"><code class="docutils literal notranslate"><span class="pre">measusre_perpendicular_distance()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fidanka.misc.utils.pfD"><code class="docutils literal notranslate"><span class="pre">pfD()</span></code></a></li>
@@ -102,6 +114,69 @@
 <section id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
 </section>
+<section id="module-fidanka.misc.logging">
+<span id="fidanka-misc-logging-module"></span><h2>fidanka.misc.logging module<a class="headerlink" href="#module-fidanka.misc.logging" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="fidanka.misc.logging.LoggerManager">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fidanka.misc.logging.</span></span><span class="sig-name descname"><span class="pre">LoggerManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.misc.logging.LoggerManager" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Singleton class to manage a logger that writes log messages to a file and the console.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="fidanka.misc.logging.LoggerManager._instance">
+<span class="sig-name descname"><span class="pre">_instance</span></span><a class="headerlink" href="#fidanka.misc.logging.LoggerManager._instance" title="Permalink to this definition"></a></dt>
+<dd><p>The single instance of LoggerManager.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#fidanka.misc.logging.LoggerManager" title="fidanka.misc.logging.LoggerManager">LoggerManager</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fidanka.misc.logging.LoggerManager.get_logger">
+<span class="sig-name descname"><span class="pre">get_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flevel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clevel</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.misc.logging.LoggerManager.get_logger" title="Permalink to this definition"></a></dt>
+<dd><p>Return the logger object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fidanka.misc.logging.LoggerManager.config_logger">
+<span class="sig-name descname"><span class="pre">config_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flevel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clevel</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fidanka.misc.logging.LoggerManager.config_logger" title="Permalink to this definition"></a></dt>
+<dd><p>Configure the logger to write to the provided filename and set the log levels.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id0">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">config_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flevel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clevel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id0" title="Permalink to this definition"></a></dt>
+<dd><p>Configure the logger to write to the provided filename and set the log levels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em>) – The name of the file to write log messages to.</p></li>
+<li><p><strong>level</strong> (<em>int</em><em>, </em><em>optional</em>) – The log level for the logger. Defaults to logging.INFO.</p></li>
+<li><p><strong>flevel</strong> (<em>int</em><em>, </em><em>optional</em>) – The log level for the file handler. Defaults to logging.INFO.</p></li>
+<li><p><strong>clevel</strong> (<em>int</em><em>, </em><em>optional</em>) – The log level for the console handler. Defaults to logging.WARNING.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id1">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id1" title="Permalink to this definition"></a></dt>
+<dd><p>Return the logger object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The logger object.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>logging.Logger</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="module-fidanka.misc.parallel">
 <span id="fidanka-misc-parallel-module"></span><h2>fidanka.misc.parallel module<a class="headerlink" href="#module-fidanka.misc.parallel" title="Permalink to this heading"></a></h2>
 <dl class="py function">
@@ -114,7 +189,7 @@
 <span id="fidanka-misc-utils-module"></span><h2>fidanka.misc.utils module<a class="headerlink" href="#module-fidanka.misc.utils" title="Permalink to this heading"></a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="fidanka.misc.utils.closest">
-<span class="sig-prename descclassname"><span class="pre">fidanka.misc.utils.</span></span><span class="sig-name descname"><span class="pre">closest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">ScalarType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.misc.utils.closest" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">fidanka.misc.utils.</span></span><span class="sig-name descname"><span class="pre">closest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Number</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Number</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#fidanka.misc.utils.closest" title="Permalink to this definition"></a></dt>
 <dd><p>Find the closest values above and below a given target in an array.
 If the target is in the array, the function returns the exact target value
 in both elements of the tuple. If the target is not exactly in the array,
@@ -217,6 +292,11 @@ a normalized PDF as the function will be normalized before sampling.</p>
 </pre></div>
 </div>
 </dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="fidanka.misc.utils.interpolate_keyed_arrays">
+<span class="sig-prename descclassname"><span class="pre">fidanka.misc.utils.</span></span><span class="sig-name descname"><span class="pre">interpolate_keyed_arrays</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arr2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Sequence</span></span></span><a class="headerlink" href="#fidanka.misc.utils.interpolate_keyed_arrays" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="fidanka.misc.utils.inverse_cdf_sample">

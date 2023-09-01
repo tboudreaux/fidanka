@@ -4,6 +4,14 @@ fidanka.misc package
 Submodules
 ----------
 
+fidanka.misc.logging module
+---------------------------
+
+.. automodule:: fidanka.misc.logging
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fidanka.misc.parallel module
 ----------------------------
 
