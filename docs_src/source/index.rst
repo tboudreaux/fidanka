@@ -5,7 +5,7 @@ Welcome to fidanka's documentation!
 
 .. toctree::
    :maxdepth: 10
-    
+
    Home <fidanka>
    Fiducial <fidanka.fiducial>
    Isochrone <fidanka.isochrone>
@@ -16,6 +16,10 @@ Welcome to fidanka's documentation!
    Warnings <fidanka.warn>
    C-Libs <fidanka.ext>
    Misc <fidanka.misc>
+
+Funding
+=======
+We recognize the support of NASA Grant No. 80NSSC18K0634
 
 
 .. Indices and tables

@@ -209,3 +209,6 @@ pop = population(
 df = pop.to_pandas()
 pop.to_csv("TestPop.csv")
 ```
+
+### Funding and Acknowledgements
+We recongnize the support of NASA Grant No. 80NSSC18K0634 in the development of this software.

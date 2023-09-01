@@ -17,7 +17,7 @@ from recommonmark.parser import CommonMarkParser
 
 source_parsers = {".md": CommonMarkParser}
 
-source_suffix = ['.rst', '.md']
+source_suffix = [".rst", ".md"]
 
 fidanka = "../../src/fidanka"
 
@@ -26,12 +26,12 @@ sys.path.insert(0, os.path.abspath(fidanka))
 
 # -- Project information -----------------------------------------------------
 
-project = 'fidanka'
-copyright = '2023, Emily M. Boudreaux'
-author = 'Emily M. Boudreaux & Martin Ying'
+project = "fidanka"
+copyright = "2023, Emily M. Boudreaux"
+author = "Emily M. Boudreaux & Martin Ying"
 
 # The full version, including alpha/beta/rc tags
-release = '0.5'
+release = "0.6.0a1"
 
 
 # -- General configuration ---------------------------------------------------
@@ -40,15 +40,15 @@ release = '0.5'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.coverage',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.githubpages',
-    'sphinx_rtd_theme'
-    ]
+    "sphinx.ext.autodoc",
+    "sphinx.ext.coverage",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.githubpages",
+    "sphinx_rtd_theme",
+]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -60,11 +60,10 @@ exclude_patterns = []
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 html_theme_options = {
-        'navigation_depth':10,
-        }
+    "navigation_depth": 10,
+}
 
 html_static_path = []
-
